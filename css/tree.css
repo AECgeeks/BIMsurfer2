@@ -14,7 +14,7 @@
     border: none;
 }
 
-.bimsurfer-static-tree div.label {
+.bimsurfer-static-tree div.bimsurfer-tree-label {
     margin-left: -100px;
     padding-left: 100px;
     width: 1000px;
@@ -30,6 +30,6 @@
     color: white;
 }
 
-.bimsurfer-static-tree div.label:before {
+.bimsurfer-static-tree div.bimsurfer-tree-label:before {
   content: "\21b3  ";
 }

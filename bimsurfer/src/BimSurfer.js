@@ -1,14 +1,14 @@
 window.BIMSERVER_VERSION = "1.5";
 
-define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer", "./EventHandler"], function (Notifier, Model, PreloadQuery, GeometryLoader, xeoViewer, EventHandler, _BimServerApi) {
+define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer", "./EventHandler", "./svgViewer/svgViewer", "./threeViewer/threeViewer"], function (Notifier, Model, PreloadQuery, GeometryLoader, XeoViewer, EventHandler, SvgViewer, ThreeViewer, _BimServerApi) {
 	
     // Backwards compatibility
     var BimServerApi;
     if (_BimServerApi) {
-		BimServerApi = _BimServerApi;
-	} else {
+        BimServerApi = _BimServerApi;
+    } else {
         BimServerApi = window.BimServerClient;
-	}
+    }
     
     function BimSurfer(cfg) {
 
@@ -17,9 +17,16 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
         EventHandler.call(this);
 
         cfg = cfg || {};
-
-        var viewer = this.viewer = new xeoViewer(cfg);
-
+        
+        self.engine = (cfg.engine || "xeogl").toLowerCase();
+        var engine = {
+            svg: SvgViewer,
+            xeogl: XeoViewer,
+            threejs: ThreeViewer
+        }[self.engine];
+        
+        var viewer = this.viewer = new engine(cfg);
+  
         /**
          * Fired whenever this BIMSurfer's camera changes.
          * @event camera-changed
@@ -58,8 +65,10 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
             } else if (params.api) {
                 return this._loadFromAPI(params);
 
-            } else if (params.src) {
+            } else if (params.src && (self.viewer instanceof XeoViewer || self.viewer instanceof ThreeViewer)) {
                 return this._loadFrom_glTF(params);
+            } else if (params.src && self.viewer instanceof SvgViewer) {
+                return this._loadFrom_SVG(params);
             }
         };
 
@@ -126,6 +135,15 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
 				}
 			});
 		};
+		
+        this._loadFrom_SVG = function (params) {
+            if (params.src) {
+                return new Promise(function (resolve, reject) {
+                    viewer.load(params.src + ".svg");
+                    resolve(viewer);
+                });
+            }
+        };
 
         this._loadFrom_glTF = function (params) {
             if (params.src) {
@@ -133,7 +151,9 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
                 var oldProgress = 0;
                 return new Promise(function (resolve, reject) {
                     var m = viewer.loadglTF(params.src);
-                    m.on("loaded", function() {						
+                    
+                    if (self.viewer instanceof XeoViewer) {
+                        m.on("loaded", function() {						
 						viewer.scene.canvas.spinner.on('processes', function(n) {
 							if (n === 0) {
                                 viewer.viewFit({});
@@ -148,7 +168,10 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
                             }
                             oldProgress = progress;
 						});                        
-                    });
+                        });
+                    } else {
+                        resolve(viewer);
+                    }
                 });
             }
         };
@@ -233,7 +256,7 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
 
                 // viewer.clear(); // For now, until we support multiple models through the API
 
-                viewer.on("tick", function () { // TODO: Fire "tick" event from xeoViewer
+                viewer.on("tick", function () { // TODO: Fire "tick" event from XeoViewer
                     loader.process();
                 });
 

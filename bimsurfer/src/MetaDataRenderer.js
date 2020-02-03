@@ -130,7 +130,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         var renderAttributes = function(elem) {
             var s = new Section({domNode:domNode});
             s.setName(elem.type || elem.getType());
-            ["GlobalId", "Name", "OverallWidth", "OverallHeight", "Tag"].forEach(function(k) {
+            ["GlobalId", "Name", "OverallWidth", "OverallHeight", "Tag", "PredefinedType", "FlowDirection"].forEach(function(k) {
                 var v = elem[k];
                 if (typeof(v) === 'undefined') {
                     var fn = elem["get"+k];
@@ -160,63 +160,92 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 pset.getName(function(name) {
                     s.setName(name);
                 });
-                var render = function(prop, index, row) {
-                    var r = row || s.addRow();
+                pset.getHasProperties(function(prop) {
+                    var r = s.addRow();
                     prop.getName(function(name) {
                         r.setName(name);
                     });
-                    if (prop.getNominalValue) {
-                        prop.getNominalValue(function(value) {
-                            r.setValue(value._v);
-                        });
-                    }
-                    if (prop.getHasProperties) {
-                        prop.getHasProperties(function(prop, index) {
-                            render(prop, index, r);
-                        });
-                    }
-                };
-                pset.getHasProperties(render);
+                    prop.getNominalValue(function(value) {
+                        r.setValue(value._v);
+                    });
+                });
             }
             return s;
         };
         
         this.setSelected = function(oid) {
-            if (oid.length !== 1) {
-                domNode.innerHTML = "&nbsp;<br>Select a single element in order to see object properties."
-                return;
-            };
+        
+            if (self.highlightMode) {
             
-            domNode.innerHTML = "";
-            
-            oid = oid[0];
-            
-            if (oid.indexOf(':') !== -1) {
-                oid = oid.split(':');
-                var model = models[oid[0]].model || models[oid[0]].apiModel;
-                var o = model.objects[oid[1]];
-            
-                renderAttributes(o);
+                (self.selectedSections || []).forEach(function(s) {
+                    s.div.className = "";
+                });
                 
-                o.getIsDefinedBy(function(isDefinedBy){
-                    if (isDefinedBy.getType() == "IfcRelDefinesByProperties") {
-                        isDefinedBy.getRelatingPropertyDefinition(function(pset){
-                            if (pset.getType() == "IfcPropertySet") {
-                                renderPSet(pset);
+                if (oid.length) {
+                    self.sections[oid[0]].forEach(function(s) {
+                        s.div.className = "selected";
+                    });
+                    
+                    self.selectedSections = self.sections[oid[0]];
+                } else {
+                    self.selectedSections = [];
+                }
+            
+            } else {
+            
+                domNode.innerHTML = "";
+                
+                if (oid.length === 1) {
+                
+                    oid = oid[0].split(':');
+                    if (oid.length == 1) {
+                        oid = [Object.keys(models)[0], oid];
+                    }
+                    var model = models[oid[0]].model || models[oid[0]].apiModel;
+                    var ob = model.objects[oid[1]];
+
+                    renderAttributes(ob);
+                    
+                    if (model.source === 'XML') {
+                        ob.properties.forEach(function(pset) {
+                            renderPSet(pset);
+                        });
+                    } else {
+                        ob.getIsDefinedBy(function(isDefinedBy){
+                            if (isDefinedBy.getType() == "IfcRelDefinesByProperties") {
+                                isDefinedBy.getRelatingPropertyDefinition(function(pset){
+                                    if (pset.getType() == "IfcPropertySet") {
+                                        renderPSet(pset);
+                                    }
+                                });
                             }
                         });
                     }
-                });
-            } else {
-                var o = models["1"].model.objects[oid];
-                renderAttributes(o);
-                o.properties.forEach(function(pset) {
-                    renderPSet(pset);
-                });
+                }
+            
             }
         };
         
-        self.setSelected([]);
+        this.renderAll = function() {
+            self.highlightMode = true;
+            self.sections = {};
+            Object.keys(models).forEach(function(m) {
+                var model = models[m].model;
+                if (model.source === 'XML') {
+                    Object.keys(model.objects).forEach(function(o) {
+                        var ob = model.objects[o];
+                        console.log(ob);
+                        var li = self.sections[ob.guid] = [];
+                        if (ob.type !== "IfcBuildingElementProxy") {
+                            li.push(renderAttributes(ob));
+                        }
+                        ob.properties.forEach(function(pset) {
+                            li.push(renderPSet(pset));
+                        });
+                    });
+                }
+            });
+        };
     };
     
     MetaDataRenderer.prototype = Object.create(EventHandler.prototype);

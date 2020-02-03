@@ -488,7 +488,7 @@ define([
             this.clear();
 
             var model = new xeogl.GLTFModel(scene, {
-                src: src
+                src: src + '.gltf'
             });
 
             collection.add(model);
@@ -797,24 +797,40 @@ define([
             for (var i = 0, len = ids.length; i < len; i++) {
 
                 objectId = ids[i];
-                object = objects[objectId] || objects_by_guid[objectId];
+                object = (objects[objectId] ? [objects[objectId]] : null) || objects_by_guid[objectId];
 
                 if (!object) {
                     // No return on purpose to continue changing color of
                     // other potentially valid object identifiers.
                     console.error("Object not found: '" + objectId + "'");
                 } else {
-                    this._setObjectColor(object, color);
+                    object.forEach(function(ob) {
+                        self._setObjectColor(ob, color);
+                    });
                 }
             }
         };
 
         this._setObjectColor = function (object, color) {
+            
+            var material = object.material = object.material.clone();
+            if (Array.isArray(color) || color instanceof Float32Array) {
+                material.diffuse = [color[0], color[1], color[2]];
+            } else {
+                Object.keys(color).forEach((c) => {
+                    const idx = "rgb".indexOf(c.toLowerCase());
+                    if (idx >= 0) {
+                        material.diffuse[idx] = color[c];
+                    }
+                });
+            }
 
-            var material = object.material;
-            material.diffuse = [color[0], color[1], color[2]];
-
-            var opacity = (color.length > 3) ? color[3] : 1;
+            var opacity;
+            if (Array.isArray(color) || color instanceof Float32Array) {
+                opacity = (color.length > 3) ? color[3] : 1;
+            } else if ('a' in color || 'A' in color) {
+                opacity = 'a' in color ? color.a : color.A;
+            }
             if (opacity !== material.opacity) {
                 material.opacity = opacity;
                 object.modes.transparent = opacity < 1;
@@ -1236,6 +1252,10 @@ define([
         this.getObject = function(id) {
             return objects[id];
         };
+        
+        this.getObjectIds = function() {
+            return Object.keys(objects);
+        }
 
         /**
          * Resets the state of this viewer to the state previously saved with #saveReset.

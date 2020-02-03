@@ -1,6 +1,3 @@
-    Copyright 2019, bimsurfer.org
-    BIM Surfer is licensed under the MIT License.
-
 # Table of Contents
 
 - [Introduction](#introduction)
@@ -302,5 +299,10 @@ Deselecting all objects:
 bimSurfer.reset({ selectionState: true });
 ````
 
- 
+# Acknowledgements
 
+BIM Surfer is licensed under the MIT License.
+
+Copyright 2020 BIM Surfer contributors
+
+For this version thanks to TNO and Bimforce and developed by @aothms @rubendel @xeolabs and @johltn

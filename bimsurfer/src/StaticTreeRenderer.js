@@ -19,6 +19,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             var reference = document.getElementById(args['domNode']);
             var y = 0;
             while (true) {
+                if (elem === null) {
+                    break;
+                }
                 y += elem.offsetTop;
                 if (elem == reference) {
                     break;
@@ -43,7 +46,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     s = selectionState[id] = false;
                 }
                 
-                domNodes[id].className = s ? "label selected" : "label";
+                domNodes[id].className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
             });
             
             var desiredViewRange = self.getSelected().map(function(id) {
@@ -106,7 +109,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 var label = document.createElement("div");
                 var children = document.createElement("div");
                 
-                label.className = "label";
+                label.className = "bimsurfer-tree-label";
                 label.appendChild(document.createTextNode(n.name || n.guid));
                 d.appendChild(label);
                 children.className = "children";
