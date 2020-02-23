@@ -127,7 +127,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
         
         this.load3d = function(part) {
         
-            bimSurfer.load({
+            var P = bimSurfer.load({
                 src: modelPath + (part ? `/${part}`: '')
             }).then(function (model) {
                 
@@ -154,7 +154,9 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
                 
             });
             
-            bimSurfer.on("selection-changed", makePartial(processSelectionEvent, bimSurfer));        
+            bimSurfer.on("selection-changed", makePartial(processSelectionEvent, bimSurfer));
+            
+            return P;
         };
         
         this.highlight = function(args) {
