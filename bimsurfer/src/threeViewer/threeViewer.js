@@ -250,7 +250,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     if (Array.isArray(color) || color instanceof Float32Array) {
                         material.color = new THREE.Color(color[0], color[1], color[2]);
                     } else {
-                        "rgb".split().forEach((c) => {
+                        "rgb".split('').forEach((c) => {
                             if (c in color) {
                                 material.color[c] = color[c];
                             }
@@ -263,7 +263,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     } else if ('a' in color || 'A' in color) {
                         opacity = 'a' in color ? color.a : color.A;
                     }
-                    if (opacity !== material.opacity) {
+                    if (typeof(opacity) !== 'undefined' && opacity !== material.opacity) {
                         material.opacity = opacity;
                         material.transparent = opacity < 1;
                         material.depthWrite = !material.transparent;

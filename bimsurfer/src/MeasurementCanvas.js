@@ -505,9 +505,19 @@ define(function() {
                 if (success) {
                     break;
                 }
-                xy.set(initialxy);
+                if (use_xeogl) {
+                    xy.set(initialxy);
+                } else {
+                    xy.copy(initialxy);
+                }
+                
                 // Reverse search direction
-                xeogl.math.mulVec2Scalar(delta, -1, delta);
+                if (use_xeogl) {
+                    xeogl.math.mulVec2Scalar(delta, -1, delta);
+                } else {
+                    delta.x *= -1.;
+                    delta.y *= -1.;
+                }
             }
             
             if (!success) {
