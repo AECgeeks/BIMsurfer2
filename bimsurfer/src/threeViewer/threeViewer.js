@@ -28,7 +28,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         var width = viewerContainer.offsetWidth;
         var height = viewerContainer.offsetHeight;;
 
-        var camera = window.cam = new THREE.PerspectiveCamera(viewAngle, width / height, nearClipping, farClipping);
+        var camera = self.camera = new THREE.PerspectiveCamera(viewAngle, width / height, nearClipping, farClipping);
         var scene = self.scene = new THREE.Scene();
 
         var lineMaterial = new THREE.LineBasicMaterial({
@@ -58,6 +58,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         scene.add(new THREE.AmbientLight(0x404050));
 
         var controls = new THREE.OrbitControls(camera, viewerContainer);
+        
+        controls.addEventListener('change', () => {
+            self.fire("camera-changed", [self.camera]);
+        });
 
         var animate = function() {
             requestAnimationFrame(animate);
