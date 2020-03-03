@@ -829,7 +829,8 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		if ( scope.enabled === false ) return;
 
-		event.preventDefault();
+		// Disabled: https://github.com/mrdoob/three.js/issues/16254
+		// event.preventDefault();
 
 		switch ( event.touches.length ) {
 
