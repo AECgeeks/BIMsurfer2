@@ -294,6 +294,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             });
             self._updateState();
         };
+        
+        self.getSelection = function() {
+            var ar = Array.from(self.selected);
+            return ar.map(function(id) {
+                return self.scene.getObjectById(id).name;
+            });
+        };
     }
 
     ThreeViewer.prototype = Object.create(EventHandler.prototype);
