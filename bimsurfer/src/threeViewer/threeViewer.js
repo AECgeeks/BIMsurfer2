@@ -24,11 +24,30 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         var viewAngle = 45;
         var nearClipping = 0.1;
         var farClipping = 9999;
+        
+        var createdModels = [];
+        
+        function containedInModel(obj) {
+             for (let m of createdModels) {
+                 if (obj.name.startsWith(m + ":")) {
+                     return true;
+                 }
+             }
+             return false;
+        }
+        
+        var camera = window.cam = new THREE.PerspectiveCamera(viewAngle, 1, nearClipping, farClipping);
+        
+        self.resize = () => {
+            var width = viewerContainer.offsetWidth;
+            var height = viewerContainer.offsetHeight;
+            cam.aspect = width / height;
+            renderer.setSize(width, height);
+            camera.updateProjectionMatrix();
+        };
+        
+        self.resize();
 
-        var width = viewerContainer.offsetWidth;
-        var height = viewerContainer.offsetHeight;;
-
-        var camera = self.camera = new THREE.PerspectiveCamera(viewAngle, width / height, nearClipping, farClipping);
         var scene = self.scene = new THREE.Scene();
 
         var lineMaterial = new THREE.LineBasicMaterial({
@@ -42,7 +61,6 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         });
         lineSelectionMaterial.depthTest = false;
 
-        renderer.setSize(width, height);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.gammaFactor = 2.2;
 
@@ -58,10 +76,6 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         scene.add(new THREE.AmbientLight(0x404050));
 
         var controls = new THREE.OrbitControls(camera, viewerContainer);
-        
-        controls.addEventListener('change', () => {
-            self.fire("camera-changed", [self.camera]);
-        });
 
         var animate = function() {
             requestAnimationFrame(animate);
@@ -123,19 +137,50 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         var center = new THREE.Vector3();
                         boundingBox.getCenter(center);
                         controls.target = center;
-                        var dist = boundingBox.getSize(new THREE.Vector3()).length();
+                        
+                        // An initial for viewer distance based on the diagonal so that
+                        // we have a camera matrix for a more detailed calculation.
+                        var viewDistance = boundingBox.getSize(new THREE.Vector3()).length();
                         camera.position.copy(center.clone().add(
-                            new THREE.Vector3(-0.5, 0.25, -1).normalize().multiplyScalar(dist)
+                            new THREE.Vector3(-0.5, 0.25, -1).normalize().multiplyScalar(viewDistance)
+                        ));
+                        
+                        // Make sure all matrices get calculated.
+                        camera.near = viewDistance / 100;
+                        camera.far = viewDistance * 100;
+                        controls.update();
+                        camera.updateProjectionMatrix();
+                        camera.updateMatrixWorld();
+                        
+                        var fovFactor = Math.tan(camera.fov / 2 / 180 * 3.141592653);
+                        var outside = 0.;
+                        
+                        // Calculate distance between projected bounding box coordinates and view frustrum boundaries
+                        var largestAngle = 0.;
+                        for (var i = 0; i < 8; i++) {
+                            const v = new THREE.Vector3(
+                                i & 1 ? boundingBox.min.x : boundingBox.max.x,
+                                i & 2 ? boundingBox.min.y : boundingBox.max.y,
+                                i & 4 ? boundingBox.min.z : boundingBox.max.z
+                            );
+                            v.applyMatrix4(camera.matrixWorldInverse);
+                            // largestAngle = Math.max(largestAngle, Math.atan2(v.x / camera.aspect, -v.z), Math.atan2(v.y, -v.z));
+                            outside = Math.max(outside, Math.abs(v.x / camera.aspect) - fovFactor * -v.z, Math.abs(v.y) - fovFactor * -v.z);
+                            console.log(v.x / camera.aspect, fovFactor * -v.z);
+                        }
+                        
+                        viewDistance += outside * 2;
+                        
+                        camera.position.copy(center.clone().add(
+                            new THREE.Vector3(-0.5, 0.25, -1).normalize().multiplyScalar(viewDistance)
                         ));
 
-                        camera.near = dist / 100;
-                        camera.far = dist * 100;
-                        camera.updateProjectionMatrix();
-
                         controls.update();
-
+                        
                         first = false;
                     }
+                    
+                    self.fire("loaded");
                 },
 
                 // called while loading is progressing
@@ -215,6 +260,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         if (x.object.name.startsWith("product-")) {
                             ids.push(x.object.name.substr(8, 36));
                             self.selected.add(x.object.id);
+                        } else if (containedInModel(x.object)) {
+                            ids.push(x.object.name);
+                            self.selected.add(x.object.id);
                         } else {
                             ids.push(x.object.parent.name.substr(8, 36));
                             for (let c of x.object.parent.children) {
@@ -250,7 +298,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     if (Array.isArray(color) || color instanceof Float32Array) {
                         material.color = new THREE.Color(color[0], color[1], color[2]);
                     } else {
-                        "rgb".split('').forEach((c) => {
+                        "rgb".split().forEach((c) => {
                             if (c in color) {
                                 material.color[c] = color[c];
                             }
@@ -263,7 +311,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     } else if ('a' in color || 'A' in color) {
                         opacity = 'a' in color ? color.a : color.A;
                     }
-                    if (typeof(opacity) !== 'undefined' && opacity !== material.opacity) {
+                    if (opacity !== material.opacity) {
                         material.opacity = opacity;
                         material.transparent = opacity < 1;
                         material.depthWrite = !material.transparent;
@@ -299,7 +347,50 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var ar = Array.from(self.selected);
             return ar.map(function(id) {
                 return self.scene.getObjectById(id).name;
+            }
+        };
+        
+        self.createModel = function(name) {
+            createdModels.push(name);
+        };
+        
+        var createdGeometries = {};
+        var createdGeometryColors = {};
+        
+        self.createGeometry = function(id, ps, ns, clrs, idxs) {
+            createdGeometryColors[id] = new THREE.Color(clrs[0], clrs[1], clrs[2]);
+            var geometry = createdGeometries[id] = new THREE.BufferGeometry();
+            geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(ps), 3));
+            geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(ns), 3));
+            geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(idxs), 1));
+        };
+        
+        self.createObject = function(modelId, roid, oid, objectId, geometryIds, type, matrix) {
+            var material = new THREE.MeshLambertMaterial({
+                color: createdGeometryColors[geometryIds[0]],  vertexColors: THREE.VertexColors
             });
+            
+            var mesh = new THREE.Mesh(createdGeometries[geometryIds[0]], material);
+            
+            var m = matrix.elements;
+            var y_up_matrix = new THREE.Matrix4;
+            y_up_matrix.set(
+                m[0], m[ 2], -m[ 1], m[3],
+		m[4], m[ 6], -m[ 5], m[7],
+		m[8], m[ 10], -m[ 9], m[11],
+		m[12], m[14], -m[13], m[15],
+            );
+            y_up_matrix.transpose();
+            
+            mesh.matrixAutoUpdate = false;
+            mesh.matrix = y_up_matrix;
+            mesh.name = modelId + ":" + objectId;
+            
+            var edges = new THREE.EdgesGeometry(mesh.geometry);
+            var line = new THREE.LineSegments(edges, lineMaterial);
+            mesh.add(line);
+            
+            scene.add(mesh);
         };
     }
 

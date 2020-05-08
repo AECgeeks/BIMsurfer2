@@ -37,20 +37,28 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var d = createElem("div", {
                 class: "selectcontainer"
             });
-            fetch(src).then(response => response.text())
-                .then(text => { 
-                    self.obj.innerHTML = text; 
-                    var svg = self.obj.getElementsByTagName('svg')[0];
-                    svg.style.width = svg.style.height = '100%';
-                    self._onload();
-                });
+            
             elem.appendChild(d);
             d.appendChild(self.select);
             
             self.obj.style.width = elem.offsetWidth + 'px';
             self.obj.style.height = (elem.offsetHeight - d.offsetHeight) + 'px';
             
-            // self.obj.onload = self._onload;
+            return fetch(src)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("HTTP status " + response.status);
+                    } else {
+                        return response.text();
+                    }
+                }).then(text => { 
+                    self.obj.innerHTML = text; 
+                    var svg = self.obj.getElementsByTagName('svg')[0];
+                    svg.style.width = svg.style.height = '100%';
+                    self._onload();
+                }).catch(exc => {
+                    self.error = true;
+                });
         }
         
         self._updateState = function(n, parentState) {
@@ -116,7 +124,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.reset = function(args) {
             if (args.colors) {
                 for (let p of Array.from(self.svg.getElementsByTagName("path"))) {
-                    p.style.fill = '#444';
+                    p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
                     p.style.stroke = '#222';
                 }        
             }
@@ -164,11 +172,14 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 opt.appendChild(document.createTextNode(N));
                 self.select.appendChild(opt);
             });
-            svgPanZoom(self.obj.contentDocument ? self.obj : self.obj.getElementsByTagName('svg')[0], {
+            const updateZoom = (scale) => { self.svg.style.fontSize = 10 / self.svg.children[0].transform.baseVal[0].matrix.a + "pt"; };
+            self.spz = svgPanZoom(self.obj.contentDocument ? self.obj : self.obj.getElementsByTagName('svg')[0], {
               zoomEnabled: true,
               preventMouseEventsDefault: true,
-              controlIconsEnabled: false
+              controlIconsEnabled: false,
+              onZoom: updateZoom
             });
+            updateZoom();
             svgDoc.onclick = function(evt) {
                 let n = evt.target;
                 const nodes = []

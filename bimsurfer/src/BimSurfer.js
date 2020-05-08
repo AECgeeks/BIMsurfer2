@@ -138,10 +138,7 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
 		
         this._loadFrom_SVG = function (params) {
             if (params.src) {
-                return new Promise(function (resolve, reject) {
-                    viewer.load(params.src + ".svg");
-                    resolve(viewer);
-                });
+                return viewer.load(params.src + ".svg");
             }
         };
 
@@ -154,8 +151,8 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
                     
                     if (self.viewer instanceof XeoViewer) {
                         m.on("loaded", function() {						
-						viewer.scene.canvas.spinner.on('processes', function(n) {
-							if (n === 0) {
+                            viewer.scene.canvas.spinner.on('processes', function(n) {
+                            if (n === 0) {
                                 viewer.viewFit({});
                                 resolve(m);
                             }
@@ -170,7 +167,9 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
 						});                        
                         });
                     } else {
-                        resolve(viewer);
+                        viewer.on("loaded", function() {
+                            resolve(viewer);
+                        });
                     }
                 });
             }
@@ -431,7 +430,11 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
          */
         this.destroy = function() {
             viewer.destroy();
-        }
+        };
+        
+        this.resize = function() {
+            viewer.resize();
+        };
     }
 
     BimSurfer.prototype = Object.create(EventHandler.prototype);

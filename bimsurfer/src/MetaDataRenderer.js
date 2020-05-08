@@ -98,9 +98,12 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 };
                 
                 visitObject(null, types);
+                var numTypes = Object.keys(objects).length;
                 visitObject(null, project);
+                var numTotal = Object.keys(objects).length;
+                var productCount = numTotal - numTypes;
                 
-                resolve({model: {objects: objects, source: 'XML'}});
+                resolve({model: {objects: objects, productCount: productCount, source: 'XML'}});
             });
         });
     }
