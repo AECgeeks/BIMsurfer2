@@ -347,7 +347,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var ar = Array.from(self.selected);
             return ar.map(function(id) {
                 return self.scene.getObjectById(id).name;
-            }
+            });
         };
         
         self.createModel = function(name) {
