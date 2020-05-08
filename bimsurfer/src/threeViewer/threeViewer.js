@@ -142,7 +142,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         // we have a camera matrix for a more detailed calculation.
                         var viewDistance = boundingBox.getSize(new THREE.Vector3()).length();
                         camera.position.copy(center.clone().add(
-                            new THREE.Vector3(-0.5, 0.25, -1).normalize().multiplyScalar(viewDistance)
+                            new THREE.Vector3(0.5, 0.25, 1).normalize().multiplyScalar(viewDistance)
                         ));
                         
                         // Make sure all matrices get calculated.
@@ -172,7 +172,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         viewDistance += outside * 2;
                         
                         camera.position.copy(center.clone().add(
-                            new THREE.Vector3(-0.5, 0.25, -1).normalize().multiplyScalar(viewDistance)
+                            new THREE.Vector3(0.5, 0.25, 1).normalize().multiplyScalar(viewDistance)
                         ));
 
                         controls.update();
