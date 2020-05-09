@@ -4,9 +4,12 @@ define([
     "bimsurfer/src/StaticTreeRenderer",
     "bimsurfer/src/MetaDataRenderer",
     "bimsurfer/src/Request",
-    "bimsurfer/src/Utils"
+    "bimsurfer/src/Utils",
+    "bimsurfer/src/AnnotationRenderer",
+    "bimsurfer/src/Assets",
+    "bimsurfer/lib/domReady!",
 ],
-function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) {
+function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets) {
     
     function MultiModalViewer(args) {
         
@@ -30,11 +33,17 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
         function mapFrom(view, objectIds) {
             if (view.engine === 'svg') {
                 mapped = objectIds.map((id) => {
-                    return id.substr(16, 36);
+                    return id.replace(/product-/g, '');
                 }); 
             } else if (view.engine === 'xeogl') {
                 mapped = objectIds.map(function(id) {
-                    return id.split("#")[1].substr(8, 36);
+                    // So, there are several options here, id can either be a glTF identifier, in which case
+                    // the id is a rfc4122 guid, or an annotation in which case it is a compressed IFC guid.
+                    if (id.substr(0, 12) === "Annotations:") {
+                        return id.substr(12);
+                    } else {
+                        return id.split("#")[1].replace(/product-/g, '');
+                    }
                 });
             } else {
                 mapped = objectIds;
@@ -43,7 +52,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
         }
 
         function mapTo(view, objectIds) {
-            if (view instanceof StaticTreeRenderer || view instanceof MetaDataRenderer || view.engine === 'xeogl') {
+            if (view instanceof StaticTreeRenderer || view instanceof MetaDataRenderer || view.engine === 'xeogl' || view.engine == 'threejs') {
                 const conditionallyCompress = (s) => {
                     if (s.length > 22) {
                         return Utils.CompressGuid(s);
@@ -125,10 +134,10 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
             bimSurfer2D.on("selection-changed", makePartial(processSelectionEvent, bimSurfer2D));
         };
         
-        this.load3d = function(part) {
+        this.load3d = function(part, baseId) {
         
             var P = bimSurfer.load({
-                src: modelPath + (part ? `/${part}`: '')
+                src: modelPath + (part ? `/${part}`: (baseId || ''))
             }).then(function (model) {
                 
                 if (bimSurfer.engine === 'xeogl' && !part) {
@@ -175,6 +184,10 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) 
                 }
             });
         }
+        
+        this.resize = function() {
+            bimSurfer.resize();
+        };
     }
     
     return MultiModalViewer;
