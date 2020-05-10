@@ -168,15 +168,17 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             return P;
         };
         
-        this.highlight = function(args) {
+        this.setColor = function(args) {
             var viewers = [bimSurfer];
             if (bimSurfer2D) {
                 viewers.push(bimSurfer2D);
             }
             viewers.forEach((v) => {
                 if (args.ids && args.ids.length) {
-                    if (v.viewer && v.viewer.getObjectIds) {
-                        v.setColor({ids: v.viewer.getObjectIds(), color: {a: 0.1}});
+                    if (args.highlight) {
+                        if (v.viewer && v.viewer.getObjectIds) {
+                            v.setColor({ids: v.viewer.getObjectIds(), color: {a: 0.1}});
+                        }
                     }
                     v.setColor.apply(v, arguments);
                 } else {
