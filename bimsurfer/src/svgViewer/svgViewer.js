@@ -167,7 +167,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             }
             self.storeys.forEach((s, i) => {
                 const opt = document.createElement('option');
-                const N = `storey ${i}`;
+                
+                var N;
+                if (s.dataset.name) {
+                    N = s.dataset.name;
+                } else {
+                    N = `storey ${i}`;
+                }
                 opt.setAttribute("value", N);
                 opt.appendChild(document.createTextNode(N));
                 self.select.appendChild(opt);
