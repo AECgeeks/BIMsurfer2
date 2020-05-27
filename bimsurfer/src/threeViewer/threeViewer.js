@@ -41,6 +41,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.resize = () => {
             var width = viewerContainer.offsetWidth;
             var height = viewerContainer.offsetHeight;
+            if (!height) {
+                height = 600;
+            }
             cam.aspect = width / height;
             renderer.setSize(width, height);
             camera.updateProjectionMatrix();
@@ -287,6 +290,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             params.ids.forEach((id) => {
                 const obj = scene.getObjectById(id) || scene.getObjectById(self.nameToId.get(id));
 
+                if (!obj) return;
+
                 const objects = obj.type === 'Group' ?
                     obj.children :
                     [obj];
@@ -317,6 +322,22 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         material.depthWrite = !material.transparent;
                     }
 
+                });
+            });
+        };
+
+        self.setVisibility = function(params) {
+            params.ids.forEach((id) => {
+                const obj = scene.getObjectById(id) || scene.getObjectById(self.nameToId.get(id));
+
+                if (!obj) return;
+
+                const objects = obj.type === 'Group' ?
+                    obj.children :
+                    [obj];
+
+                objects.forEach((object) => {
+                    object.visible = params.visible;
                 });
             });
         };
