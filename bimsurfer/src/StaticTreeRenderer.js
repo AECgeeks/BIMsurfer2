@@ -30,6 +30,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             }
             return y;
         };
+
+        this.parentToChildMapping = {};
+        this.roots = [];
         
         this.setSelected = function(ids, mode) {
             if (mode == SELECT_EXCLUSIVE) {
@@ -46,11 +49,11 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     s = selectionState[id] = false;
                 }
                 
-                domNodes[id].className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
+                domNodes[id].label.className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
             });
             
             var desiredViewRange = self.getSelected().map(function(id) {
-                return self.getOffset(domNodes[id]);
+                return self.getOffset(domNodes[id].label);
             });
             
             if (desiredViewRange.length) {
@@ -104,23 +107,67 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         };
         
         this.build = function() {
-            var build = function(modelId, d, n) {
+            var domNode = document.getElementById(args['domNode']);
+
+            var build = function(modelId, parentId, d, n, col2) {
                 var qid = self.qualifyInstance(modelId, fromXml ? n.guid : n.id);
                 var label = document.createElement("div");
                 var children = document.createElement("div");
+                var children2, eye;
+
+                if (args.withVisibilityToggle) {
+                    children2 = document.createElement("div");
+                    eye = document.createElement("div");
+                    eye.className = 'bimsurfer-tree-eye';
+                    col2.appendChild(eye);
+                    col2.appendChild(children2);
+                }
+
+                if (!parentId) {
+                    self.roots.push(qid);
+                } else {
+                    (self.parentToChildMapping[parentId] = (self.parentToChildMapping[parentId] || [])).push(qid);
+                }
                 
                 label.className = "bimsurfer-tree-label";
                 label.appendChild(document.createTextNode(n.name || n.guid));
+                                
                 d.appendChild(label);
-                children.className = "children";
+                children.className = "bimsurfer-tree-children-with-indent";
                 d.appendChild(children);
-                domNodes[qid] = label;
+
+                domNodes[qid] = {label: label, eye: eye};
+
+                if (eye) {
+                    eye.onclick = function(evt) {
+                        evt.stopPropagation();
+                        evt.preventDefault();
+
+                        var visible = !eye.classList.toggle('bimsurfer-tree-eye-off');
+                        var descendants = [];
+                        var collect = function(id) {
+                            descendants.push(id);
+                            (self.parentToChildMapping[id] || []).forEach(collect);
+                        }
+                        collect(qid);
+                        var fn = visible ? DOMTokenList.prototype.remove : DOMTokenList.prototype.add;
+                        descendants.forEach(s => {
+                            fn.call(domNodes[s].eye.classList, 'bimsurfer-tree-eye-off');
+                        });
+
+                        self.fire("visibility-changed", [{visible: visible, ids: descendants}]);
+
+                        return false;
+                    }
+                }
                 
                 label.onclick = function(evt) {
                     evt.stopPropagation();
                     evt.preventDefault();
+
                     self.setSelected([qid], evt.shiftKey ? TOGGLE : SELECT_EXCLUSIVE);
                     self.fire("click", [qid, self.getSelected(true)]);
+
                     return false;
                 };
                 
@@ -130,25 +177,57 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                         if (child["xlink:href"]) continue;
                         if (child.type === "IfcOpeningElement") continue;
                     }
+                    
                     var d2 = document.createElement("div");
                     d2.className = "item";
                     children.appendChild(d2);
-                    build(modelId, d2, child);
+
+                    if (eye) {
+                        var d3 = document.createElement("div");
+                        d3.className = "item";
+                        children2.appendChild(d3);
+                    }
+
+                    build(modelId, qid, d2, child, d3);
                 }
             }
             models.forEach(function(m) {
-                var d = document.createElement("div");
-                d.className = "item";
+                var column1 = document.createElement("div");
+                var column2;
+                var row1cell = document.createElement("div");
+
+                column1.className = 'bimsurfer-tree-column';
+                row1cell.className = "item";
+                column1.appendChild(row1cell);
+
+                if (args.withVisibilityToggle) {                
+                    column2 = document.createElement("div");
+                    var row2cell = document.createElement("div");
+
+                    column2.className = 'bimsurfer-tree-column';
+                    row2cell.className = "item";
+                    column2.appendChild(row2cell);
+
+                    column1.style.width = (domNode.offsetWidth - 40) + 'px'
+                    column2.style.width = '20px';
+                } else {
+                    column1.style.width = '100%';
+                }
+
                 if (m.tree) {
-                    build(m.id, d, m.tree);
+                    build(m.id, null, row1cell, m.tree, column2);
                 } else if (m.src) {
                     Request.Make({url: m.src}).then(function(xml) {
                         var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
                         var project = Utils.FindNodeOfType(json.children[0], "decomposition")[0].children[0];
-                        build(m.id || i, d, project);
+                        build(m.id || i, null, row1cell, project, column2);
                     });
                 }
-                document.getElementById(args['domNode']).appendChild(d);
+
+                domNode.appendChild(column1);
+                if (column2) {
+                    domNode.appendChild(column2);
+                }
             });
         }
         
