@@ -19,6 +19,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             args.value.appendChild(document.createTextNode(value));
         }
     }
+
+    function identity(x) { return x; }                
     
     function Section(args) {
         var self = this;
@@ -174,6 +176,73 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 });
             }
             return s;
+        };
+
+        var queryPSet = function(resolve, pset, psetName, propName) {
+            if (pset.name && pset.children) {
+                // based on XML
+                if (pset.name !== psetName) {
+                    return false;
+                }
+                return pset.children.map(function(v) {
+                    if (v.name !== propName) {
+                        return false;
+                    }
+                    resolve(v.NominalValue);
+                    return true;
+                }).some(identity);
+            } else {
+                // based on BIMserver
+                pset.getName(function(name) {
+                    if (name !== psetName) {
+                        return;
+                    }
+                    pset.getHasProperties(function(prop) {
+                        prop.getName(function(name) {
+                            if (name !== propName) {
+                                return;
+                            }
+                            prop.getNominalValue(function(value) {
+                                resolve(value._v);
+                            });
+                        });
+                        
+                    });
+                });
+                
+            }
+            return s;
+        };
+
+        this.query = function(oid, psetName, propName) {
+            return new Promise(function(resolve, reject) {
+                oid = oid.split(':');
+                if (oid.length == 1) {
+                    oid = [Object.keys(models)[0], oid];
+                }
+                var model = models[oid[0]].model || models[oid[0]].apiModel;
+                var ob = model.objects[oid[1]];
+
+                if (model.source === 'XML') {
+                    let containedInPset = ob.properties.map(function(pset) {
+                        return queryPSet(resolve, pset, psetName, propName);
+                    });
+                    console.log(containedInPset);
+                    if (!containedInPset.some(identity)) {
+                        reject();
+                    }
+                } else {
+                    ob.getIsDefinedBy(function(isDefinedBy){
+                        if (isDefinedBy.getType() == "IfcRelDefinesByProperties") {
+                            isDefinedBy.getRelatingPropertyDefinition(function(pset){
+                                if (pset.getType() == "IfcPropertySet") {
+                                    queryPSet(resolve, pset, propsetName, propName);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         };
         
         this.setSelected = function(oid) {
