@@ -365,11 +365,17 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
         
         self.getSelection = function() {
-            var ar = Array.from(self.selected);
-            return ar.map(function(id) {
-                return self.scene.getObjectById(id).name;
+            elements = new Set();
+            self.selected.forEach((id) => {
+                obj = self.scene.getObjectById(id);
+                if (obj.name.startsWith("product-")) {
+                    elements.add(obj.name.substr(8, 36));
+                } else {
+                    elements.add(obj.parent.name.substr(8, 36));
+                }
             });
-        };
+            return Array.from(elements)
+        }
         
         self.createModel = function(name) {
             createdModels.push(name);
