@@ -23,7 +23,8 @@ require([
 ],
 function (BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) {
     var bimSurfer = new BimSurfer({
-        domNode: "viewerContainer"
+        domNode: "viewerContainer",
+        engine: 'threejs'
     });
     
     var modelName = window.location.hash;
@@ -35,12 +36,14 @@ function (BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) {
     modelName = "models/" + modelName;
     
     var tree = new StaticTreeRenderer({
-        domNode: "treeContainer"
+        domNode: "treeContainer",
+        withVisibilityToggle: true
     });
     tree.addModel({id: 1, src: modelName + ".xml"});
     tree.build();
     
     tree.on("click", highlight);
+    tree.on("visibility-changed", bimSurfer.setVisibility);
     
     var data = new MetaDataRenderer({
         domNode: "dataContainer"
@@ -48,29 +51,29 @@ function (BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils) {
     data.addModel({id: 1, src: modelName + ".xml"});
     
     bimSurfer.load({
-        src: modelName + ".gltf"
-    }).then(function (model) {
+        src: modelName
+    }).then(function (model) {        
+        if (bimSurfer.engine === 'xeogl') {
+            var scene = bimSurfer.viewer.scene;
+            var aabb = scene.worldBoundary.aabb;
+            var diag = xeogl.math.subVec3(aabb.slice(3), aabb, xeogl.math.vec3());
+            var modelExtent = xeogl.math.lenVec3(diag);
         
-        var scene = bimSurfer.viewer.scene;
-        
-        var aabb = scene.worldBoundary.aabb;
-        var diag = xeogl.math.subVec3(aabb.slice(3), aabb, xeogl.math.vec3());
-        var modelExtent = xeogl.math.lenVec3(diag);
-    
-        scene.camera.project.near = modelExtent / 1000.;
-        scene.camera.project.far = modelExtent * 100.;
-       
-        scene.camera.view.eye = [-1,-1,5];
-        scene.camera.view.up = [0,0,1];
-        bimSurfer.viewFit({centerModel:true});
-        
-        bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
-
+            scene.camera.project.near = modelExtent / 1000.;
+            scene.camera.project.far = modelExtent * 100.;
+           
+            scene.camera.view.eye = [-1,-1,5];
+            scene.camera.view.up = [0,0,1];
+            bimSurfer.viewFit({centerModel:true});
+            
+            bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
+        }
     });
 
     bimSurfer.on("selection-changed", function(selected) {
         data.setSelected(selected.objects.map(function(id) {
-            return Utils.CompressGuid(id.split("#")[1].substr(8, 36).replace(/-/g, ""));
+            id = id.indexOf('#') === -1 ? id : id.split("#")[1];
+            return Utils.CompressGuid(id.replace(/^product\-/, '').replace(/-/g, ""));
         }));
     });
     

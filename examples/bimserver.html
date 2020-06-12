@@ -154,13 +154,14 @@
     	                            
     	                            var cmd = "bimSurfer."+m.name+"("+args+");";
     	                            n.innerHTML += "<textarea rows=3 id='code"+i+"' spellcheck=false>"+cmd+"\n</textarea>";
-    	                            exec_statement = "eval(document.getElementById(\"code"+i+"\").value)"
+    	                            var exec_statement_1 = "eval(document.getElementById(\"code"+i+"\").value)";
+    	                            var exec_statement_2;
     	                            if (m.hasResult) {
-    	                                exec_statement = "document.getElementById(\"result"+i+"\").innerHTML = JSON.stringify(" + exec_statement + ").replace(/,/g, \", \")";
+    	                                exec_statement_2 = "document.getElementById(\"result"+i+"\").innerHTML = JSON.stringify(" + exec_statement_1 + ").replace(/,/g, \", \")";
     	                            } else {
-    	                                exec_statement += "; window.scrollTo(0,0)"
+    	                                exec_statement_2 = exec_statement_1 + "; window.scrollTo(0,0)"
     	                            }
-    	                            n.innerHTML += "<button onclick='"+exec_statement+"'>run</button>";
+    	                            n.innerHTML += "<button onclick='" + exec_statement_2 + "'>run</button>";
     	                            if (m.hasResult) {
     	                                n.innerHTML += "<pre id='result"+i+"' />";
     	                            }

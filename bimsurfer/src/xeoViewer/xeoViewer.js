@@ -631,7 +631,7 @@ define([
                     changed = true;
                 }
                 var object_ = objects[id];
-                if (!object_) objects_by_guid[id].forEach(fn)
+                if (!object_) (objects_by_guid[id] || []).forEach(fn)
                 else fn(object_);
             }
 
@@ -1127,7 +1127,7 @@ define([
             if (Object.keys(objects_by_guid).length) {
                 ids = [];
                 ids_.forEach(function(i) {
-                    objects_by_guid[i].forEach(function(o) {
+                    (objects_by_guid[i] || []).forEach(function(o) {
                         ids.push(o.id);
                     });
                 });

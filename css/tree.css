@@ -8,9 +8,10 @@
 
 .bimsurfer-static-tree div.item {
     border-top: solid 1px #eee;
+    line-height: 12pt;
 }
 
-.bimsurfer-static-tree > div.item {
+.bimsurfer-static-tree > div > div.item {
     border: none;
 }
 
@@ -21,7 +22,7 @@
     cursor: pointer;
 }
 
-.bimsurfer-static-tree div.children {
+.bimsurfer-static-tree .bimsurfer-tree-children-with-indent {
     padding-left: 10px;
 }
 
@@ -32,4 +33,17 @@
 
 .bimsurfer-static-tree div.bimsurfer-tree-label:before {
   content: "\21b3  ";
+}
+
+.bimsurfer-static-tree div.bimsurfer-tree-eye:before {
+    content: "\1f441";
+}
+  
+.bimsurfer-tree-column {
+    display: inline-block;
+    overflow: hidden;
+}
+
+div.bimsurfer-tree-eye-off {
+    opacity: 0.5;
 }

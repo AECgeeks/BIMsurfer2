@@ -41,6 +41,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.resize = () => {
             var width = viewerContainer.offsetWidth;
             var height = viewerContainer.offsetHeight;
+            if (!height) {
+                height = 600;
+            }
             cam.aspect = width / height;
             renderer.setSize(width, height);
             camera.updateProjectionMatrix();
@@ -299,6 +302,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             params.ids.forEach((id) => {
                 const obj = scene.getObjectById(id) || scene.getObjectById(self.nameToId.get(id));
 
+                if (!obj) return;
+
                 const objects = obj.type === 'Group' ?
                     obj.children :
                     [obj];
@@ -333,6 +338,22 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             });
         };
 
+        self.setVisibility = function(params) {
+            params.ids.forEach((id) => {
+                const obj = scene.getObjectById(id) || scene.getObjectById(self.nameToId.get(id));
+
+                if (!obj) return;
+
+                const objects = obj.type === 'Group' ?
+                    obj.children :
+                    [obj];
+
+                objects.forEach((object) => {
+                    object.visible = params.visible;
+                });
+            });
+        };
+
         self.getObjectIds = function() {
             return self.allIds;
         };
@@ -356,11 +377,17 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
         
         self.getSelection = function() {
-            var ar = Array.from(self.selected);
-            return ar.map(function(id) {
-                return self.scene.getObjectById(id).name;
+            elements = new Set();
+            self.selected.forEach((id) => {
+                obj = self.scene.getObjectById(id);
+                if (obj.name.startsWith("product-")) {
+                    elements.add(obj.name.substr(8, 36));
+                } else {
+                    elements.add(obj.parent.name.substr(8, 36));
+                }
             });
-        };
+            return Array.from(elements)
+        }
         
         self.createModel = function(name) {
             createdModels.push(name);
