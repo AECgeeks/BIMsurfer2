@@ -98,11 +98,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
             const convertGuidOrIdentity = (s) => (self.guidToIdMap.get(s) || s);
             
+            const prefix = self.legacySvgExport ? 'product-product' : 'product';
+            
             var nodes = null;
             if (params.nodes) {
                 nodes = params.nodes;
             } else if (params.ids) {
-                nodes = params.ids.map(convertGuidOrIdentity).map((s)=>`product-product-${s}-body`).map(self.svg.getElementById.bind(self.svg)).filter((s) => (s !== null));
+                nodes = params.ids.map(convertGuidOrIdentity).map((s)=>`${prefix}-${s}-body`).map(self.svg.getElementById.bind(self.svg)).filter((s) => (s !== null));
             }
             
             nodes.forEach(fn.bind(self.selected));                    
@@ -159,7 +161,11 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             const traverse = (e) => {
                 const id = e.getAttribute('id');
                 if (id !== null) {
-                    const id2 = id.substr(16, 36);
+                    const parts = id.split('-');
+                    if (parts.filter(s => s === 'product').length == 2) {
+                        self.legacySvgExport = true;
+                    }
+                    const id2 = parts.filter(s => s !== 'product' && s !== 'body' && s !== 'storey').join('-');
                     const g = Utils.CompressGuid(id2);
                     self.guidToIdMap.set(g, id2);
                 }
