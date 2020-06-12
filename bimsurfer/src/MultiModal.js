@@ -7,11 +7,14 @@ define([
     "bimsurfer/src/Utils",
     "bimsurfer/src/AnnotationRenderer",
     "bimsurfer/src/Assets",
+    "bimsurfer/src/EventHandler",
     "bimsurfer/lib/domReady!",
 ],
-function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets) {
+function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
     
     function MultiModalViewer(args) {
+    
+        EventHandler.call(this);
         
         var origin;
         try {
@@ -80,6 +83,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             }
             
             if (propagate) {
+                self.fire('selection-changed', [objectIds]);
+            
                 [bimSurfer, bimSurfer2D, self.treeView, self.metaDataView].forEach((view) => {
                     if (view && view !== source) {
                         if (view.setSelection) {
@@ -133,6 +138,19 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             
             bimSurfer2D.on("selection-changed", makePartial(processSelectionEvent, bimSurfer2D));
         };
+        
+        this.destroy = function() {
+            for (const v of [self.metaDataView, self.treeView, bimSurfer2D, bimSurfer]) {
+                if (v) {
+                    v.destroy();
+                }
+            }
+            self.metaDataView = self.treeView = bimSurfer2D = bimSurfer = null; 
+        };
+        
+        this.getSelection = function() {
+            return bimSurfer.getSelection().map(id => id.replace(/product-/g, '')).map(Utils.CompressGuid);
+        }
         
         this.load3d = function(part, baseId) {
         
@@ -192,5 +210,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         };
     }
     
+    MultiModalViewer.prototype = Object.create(EventHandler.prototype);
     return MultiModalViewer;
+    
 });

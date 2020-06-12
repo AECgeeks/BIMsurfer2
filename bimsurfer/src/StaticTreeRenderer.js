@@ -103,6 +103,13 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             }
         };
         
+        this.destroy = function() {
+            var node = document.getElementById(args['domNode']);
+            while (node.lastChild) {
+                node.removeChild(node.lastChild);
+            }
+        };
+        
         this.build = function() {
             var build = function(modelId, d, n) {
                 var qid = self.qualifyInstance(modelId, fromXml ? n.guid : n.id);

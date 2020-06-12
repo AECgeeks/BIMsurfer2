@@ -143,6 +143,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             });
         }
         
+        self.destroy = function() {
+            self.spz.destroy();
+            while(elem.lastChild) {
+                elem.removeChild(elem.lastChild);
+            }
+        }
+        
         self._onload = function() {
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
             self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;

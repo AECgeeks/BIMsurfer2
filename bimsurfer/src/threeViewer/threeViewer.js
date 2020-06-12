@@ -251,6 +251,17 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             if (!evt.shiftKey) {
                 self.selected.clear();
             }
+            
+            var selected = true;
+            
+            const processSelection = (name, geomIds) => {
+                ids.push(name);
+                selected = !(self.selected.has(geomIds[0]) && evt.shiftKey);
+                const fn = selected
+                    ? self.selected.add.bind(self.selected)
+                    : self.selected.delete.bind(self.selected);
+                geomIds.forEach(fn);
+            };
 
             if (intersects.length) {
                 var objId;
@@ -258,16 +269,17 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 for (var x of intersects) {
                     if (x.object.geometry.type == "BufferGeometry") {
                         if (x.object.name.startsWith("product-")) {
-                            ids.push(x.object.name.substr(8, 36));
-                            self.selected.add(x.object.id);
+                            processSelection(
+                                x.object.name.substr(8, 36), 
+                                [x.object.id]);
                         } else if (containedInModel(x.object)) {
-                            ids.push(x.object.name);
-                            self.selected.add(x.object.id);
+                            processSelection(
+                                x.object.name, 
+                                [x.object.id]);
                         } else {
-                            ids.push(x.object.parent.name.substr(8, 36));
-                            for (let c of x.object.parent.children) {
-                                self.selected.add(c.id);
-                            }
+                            processSelection(
+                                x.object.parent.name.substr(8, 36), 
+                                x.object.parent.children.map(c => c.id));
                         }
                         break;
                     }
@@ -279,7 +291,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             self.fire("selection-changed", [{
                 objects: ids,
                 clear: !evt.shiftKey,
-                selected: true
+                selected: selected
             }]);
         };
 
@@ -391,6 +403,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             mesh.add(line);
             
             scene.add(mesh);
+        };
+        
+        self.destroy = function() {
+            scene.traverse(object => {
+        	if (!object.isMesh) return
+        	object.geometry.dispose();
+            });
         };
     }
 

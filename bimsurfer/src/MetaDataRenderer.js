@@ -249,6 +249,13 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
             });
         };
+        
+        this.destroy = function() {
+            while (domNode.lastChild) {
+                domNode.removeChild(domNode.lastChild);
+            }
+        };
+
     };
     
     MetaDataRenderer.prototype = Object.create(EventHandler.prototype);
