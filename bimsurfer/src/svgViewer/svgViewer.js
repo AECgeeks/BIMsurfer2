@@ -69,7 +69,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                     if (n.tagName == 'path') {
                         const line = n.cloneNode(false);
-                        line.style.cssText = "fill: none; stroke: lime; stroke-width: 3px";
+                        line.style.cssText = "fill: none; stroke: lime; stroke-width: 3px; vector-effect: non-scaling-stroke;";
                         self.lineMapping.set(n, line);
                         // children[0] is the pan-zoom viewport
                         self.svg.children[0].appendChild(line);
@@ -124,10 +124,15 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
         
         self.reset = function(args) {
-            if (args.colors) {
+            if (args.colors || args.stroke) {
                 for (let p of Array.from(self.svg.getElementsByTagName("path"))) {
-                    p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
-                    p.style.stroke = '#222';
+                    if (args.colors) {
+                        p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
+                        p.style.stroke = '#222';
+                    }
+                    if (args.stroke) {
+                        p.style.vectorEffect = 'non-scaling-stroke';
+                    }
                 }        
             }
         }
@@ -155,7 +160,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self._onload = function() {
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
             self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;
-            self.reset({colors:true});
+            self.reset({colors:true, stroke:true});
             self.storeys = Array.from(self.svg.children);
             self.guidToIdMap = new Map();
             const traverse = (e) => {

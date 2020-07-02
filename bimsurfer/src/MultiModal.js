@@ -110,7 +110,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
 
         this.loadTreeView = function(domNode) {
             var tree = new StaticTreeRenderer({
-                domNode: domNode
+                domNode: domNode,
+                withVisibilityToggle: args.withTreeVisibilityToggle
             });
             tree.addModel({id: 1, src: modelPath + ".xml"});
             tree.build();
