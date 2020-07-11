@@ -10,6 +10,45 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         }
         return ob;
     }
+    
+    function testOverlap(text, path) {
+        var Mt = text.getScreenCTM().inverse();
+        
+        var P1 = text.ownerSVGElement.createSVGPoint();
+        var P2 = text.ownerSVGElement.createSVGPoint();
+        var bb = text.getBoundingClientRect();
+        
+        if (typeof(bb) === 'undefined') {
+            return false;
+        }
+        
+        P1.x = bb.x;
+        P1.y = bb.y;
+        P2.x = bb.x + bb.width;
+        P2.y = bb.y + bb.height;
+        
+        P1 = P1.matrixTransform(Mt);
+        P2 = P2.matrixTransform(Mt);
+        
+        var bb_width = P2.x - P1.x;
+        var bb_height = P2.y - P1.y;
+        
+        var len = path.getTotalLength();
+        var u = 0.;
+        var step = (bb_width < bb_height ? bb_width : bb_height) / 2.;
+
+        while (u < len) {
+            // Sample some points over the bath when contained in the AABB rectangle
+            // for the text we know text and path intersect and text should be hidden
+            var p = path.getPointAtLength(u);
+            if (p.x >= P1.x && p.y >= P1.y && p.x <= P2.x && p.y <= P2.y) {
+                return true;
+            }
+            u += step;
+        }
+        
+        return false;
+    }
   
     function SvgViewer(cfg) {
         let self = this;
@@ -55,9 +94,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     self.obj.innerHTML = text; 
                     var svg = self.obj.getElementsByTagName('svg')[0];
                     svg.style.width = svg.style.height = '100%';
-                    self._onload();
                 }).catch(exc => {
                     self.error = true;
+                }).then(() => {
+                    self._onload();
                 });
         }
         
@@ -69,7 +109,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                     if (n.tagName == 'path') {
                         const line = n.cloneNode(false);
-                        line.style.cssText = "fill: none; stroke: lime; stroke-width: 3px; vector-effect: non-scaling-stroke;";
+                        line.style.cssText = "fill: none; stroke: lime; stroke-width: 3px";
                         self.lineMapping.set(n, line);
                         // children[0] is the pan-zoom viewport
                         self.svg.children[0].appendChild(line);
@@ -121,18 +161,14 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             self.storeys.forEach((s, j)=>{
                 s.style.visibility = (i == j) ? 'visible' : 'hidden';
             });
+            self.updateTextVisibility();
         };
         
         self.reset = function(args) {
-            if (args.colors || args.stroke) {
+            if (args.colors) {
                 for (let p of Array.from(self.svg.getElementsByTagName("path"))) {
-                    if (args.colors) {
-                        p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
-                        p.style.stroke = '#222';
-                    }
-                    if (args.stroke) {
-                        p.style.vectorEffect = 'non-scaling-stroke';
-                    }
+                    p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
+                    p.style.stroke = '#222';
                 }        
             }
         }
@@ -157,10 +193,30 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             }
         }
         
+        self.updateTextVisibility = function() {
+            if (!self.textNodes) return;
+            self.textNodes.forEach(t => {
+                let n = t;
+                var storeyVisible;
+                while (n) {
+                    if (self.storeys.indexOf(n) !== -1) {
+                        storeyVisible = n.style.visibility !== 'hidden';
+                        break;
+                    }
+                    n = n.parentElement;
+                }
+                var visible = storeyVisible && !Array.from(t.parentElement.querySelectorAll('path')).some((path) => {
+                    return testOverlap(t, path)
+                });
+                // t.style.display = visible ? 'inline' : 'none';
+                t.style.visibility = visible ? 'visible' : 'hidden';
+            });
+        }
+        
         self._onload = function() {
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
             self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;
-            self.reset({colors:true, stroke:true});
+            self.reset({colors:true});
             self.storeys = Array.from(self.svg.children);
             self.guidToIdMap = new Map();
             const traverse = (e) => {
@@ -196,7 +252,11 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 opt.appendChild(document.createTextNode(N));
                 self.select.appendChild(opt);
             });
-            const updateZoom = (scale) => { self.svg.style.fontSize = 10 / self.svg.children[0].transform.baseVal[0].matrix.a + "pt"; };
+            self.textNodes = Array.from(self.svg.querySelectorAll('text'));        
+            const updateZoom = (scale) => { 
+                self.svg.style.fontSize = 10 / self.svg.children[0].transform.baseVal[0].matrix.a + "pt";
+                self.updateTextVisibility();
+            };
             self.spz = svgPanZoom(self.obj.contentDocument ? self.obj : self.obj.getElementsByTagName('svg')[0], {
               zoomEnabled: true,
               preventMouseEventsDefault: true,
