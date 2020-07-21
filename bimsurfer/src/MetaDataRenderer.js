@@ -62,7 +62,14 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         return new Promise(function (resolve, reject) {
             Request.Make({url: src}).then(function(xml) {
                 var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                return loadModelFromJson(json);
+            });
+        });
+    }
                 
+                
+    function loadModelFromJson(json) {            
+        return new Promise(function (resolve, reject) {
                 var psets = Utils.FindNodeOfType(json, "properties")[0];
                 var project = Utils.FindNodeOfType(json, "decomposition")[0].children[0];
                 var types = Utils.FindNodeOfType(json, "types")[0];
@@ -106,7 +113,6 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 var productCount = numTotal - numTypes;
                 
                 resolve({model: {objects: objects, productCount: productCount, source: 'XML'}});
-            });
         });
     }
     
@@ -124,7 +130,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     models[args.id] = args.model;
                     resolve(args.model);
                 } else {
-                    loadModelFromSource(args.src).then(function(m) {
+                    var fn = args.src ? loadModelFromSource : loadModelFromJson;
+                    fn(args.src).then(function(m) {
                         models[args.id] = m;
                         resolve(m);
                     });

@@ -223,12 +223,19 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
 
                 if (m.tree) {
                     build(m.id, null, row1cell, m.tree, column2);
-                } else if (m.src) {
-                    Request.Make({url: m.src}).then(function(xml) {
+                } else if (m.src || m.json) {
+                    function loadModelFromSource(src) {
+                    Request.Make({url: src}).then(function(xml) {
                         var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                        loadModelFromJson(json);
+                    });                    
+                    }
+                    function loadModelFromJson(json) {
                         var project = Utils.FindNodeOfType(json.children[0], "decomposition")[0].children[0];
                         build(m.id || i, null, row1cell, project, column2);
-                    });
+                    }
+                    var fn = m.src ? loadModelFromSource : loadModelFromJson;
+                    fn(m.src ? m.src : m.json);
                 }
 
                 domNode.appendChild(column1);
