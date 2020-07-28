@@ -167,7 +167,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.reset = function(args) {
             if (args.colors) {
                 for (let p of Array.from(self.svg.getElementsByTagName("path"))) {
-                    p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
+                    if (p.parentNode.className.baseVal == 'IfcDoor') {
+                        // @todo this is mainly for the door arcs, but we need to annotate closed areas and line annotations better in the IfcConvert binary
+                        p.style.fill = 'none';
+                    } else {
+                        p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
+                    }
                     p.style.stroke = '#222';
                 }        
             }
