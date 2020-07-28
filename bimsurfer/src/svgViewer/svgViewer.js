@@ -171,7 +171,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         // @todo this is mainly for the door arcs, but we need to annotate closed areas and line annotations better in the IfcConvert binary
                         p.style.fill = 'none';
                     } else {
-                        p.style.fill = p.parentNode.className.baseVal == 'IfcSpace' ? '#ccc' : '#444';
+                        p.style.fill = '#444';
+                        if (p.parentNode.className.baseVal == 'IfcSpace') {
+                            p.style.fillOpacity = '.2';
+                        }
                     }
                     p.style.stroke = '#222';
                 }        
