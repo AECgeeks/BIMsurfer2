@@ -59,11 +59,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
     };
     
     function loadModelFromSource(src) {
-        return new Promise(function (resolve, reject) {
-            Request.Make({url: src}).then(function(xml) {
-                var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
-                return loadModelFromJson(json);
-            });
+        return Request.Make({url: src}).then(function(xml) {
+            var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+            return loadModelFromJson(json);
         });
     }
                 
