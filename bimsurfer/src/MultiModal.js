@@ -117,6 +117,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             tree.build();
             self.treeView = tree;
             tree.on('click', makePartial(processSelectionEvent, tree));
+            tree.on('visibility-changed', bimSurfer.setVisibility);
         }
         
         this.loadMetadata = function(domNode) {            

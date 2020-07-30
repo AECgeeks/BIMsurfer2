@@ -182,7 +182,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     var child = n.children[i];
                     if (fromXml) {
                         if (child["xlink:href"]) continue;
-                        if (child.type === "IfcOpeningElement") continue;
+                        // if (child.type === "IfcOpeningElement") continue;
                     }
                     
                     var d2 = document.createElement("div");
