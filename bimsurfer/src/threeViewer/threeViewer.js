@@ -66,6 +66,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.gammaFactor = 2.2;
+        renderer.sortObjects = false;
+
+        var rerender = () => renderer.render(scene, camera);
 
         document.getElementById(cfg.domNode).appendChild(renderer.domElement);
         renderer.setClearColor(0x000000, 0);
@@ -79,13 +82,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         scene.add(new THREE.AmbientLight(0x404050));
 
         var controls = new THREE.OrbitControls(camera, viewerContainer);
-
-        var animate = function() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        };
-
-        animate();
+        controls.addEventListener('change', rerender);
 
         var first = true;
 
@@ -105,23 +102,50 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     var obj = scene.getObjectById(id);
                     obj.material = mat;
                 }
+                rerender();
             }
         };
 
         self.loadglTF = function(src) {
 
             var loader = new THREE.GLTFLoader();
+            var draco = new THREE.DRACOLoader;
+            draco.setDecoderPath('/static/bimsurfer/src/threeViewer/');
+            loader.setDRACOLoader(draco);
             loader.load(src + ".glb", function(gltf) {
                     scene.add(gltf.scene);
+
+                    var createdLines = {};
+                    var geometryCount = {};
+
+                    gltf.scene.traverse((obj) => {
+                        if (obj.isMesh && obj.geometry) {
+                            geometryCount[obj.geometry.id] = 1;
+                        }
+                    });
+
+                    // @todo we'll make this more adaptive and pregenerate the lines in gltf.
+                    var createLines = Object.keys(geometryCount).length <= 500;
+                    if (!createLines) {
+                        console.log("not creating line geometries due to model size");
+                    }
 
                     gltf.scene.traverse((obj) => {
                         if (obj.isMesh && obj.geometry) {
                             self.originalMaterials.set(obj.id, obj.material);
-
-                            edges = new THREE.EdgesGeometry(obj.geometry);
-                            var line = new THREE.LineSegments(edges, lineMaterial);
-                            obj.add(line);
                             obj.material.side = THREE.DoubleSide;
+                            obj.material.depthWrite = !obj.material.transparent;
+
+                            if (createLines) {
+                                var edges;
+                                if (obj.geometry.id in createdLines) {
+                                    edges = createdLines[obj.geometry.id];
+                                } else {
+                                    edges = createdLines[obj.geometry.id] = new THREE.EdgesGeometry(obj.geometry);
+                                }
+                                var line = new THREE.LineSegments(edges, lineMaterial);
+                                obj.add(line);
+                            }                            
                         }
 
                         if (obj.name.startsWith("product-")) {
@@ -217,6 +241,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     obj.children[0].material = lineSelectionMaterial;
                 }
             }
+            rerender();
         };
 
         // We don't want drag events to be registered as clicks
@@ -336,6 +361,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
                 });
             });
+            rerender();
         };
 
         self.setVisibility = function(params) {
@@ -352,6 +378,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     object.visible = params.visible;
                 });
             });
+            rerender();
         };
 
         self.getObjectIds = function() {
@@ -415,9 +442,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var y_up_matrix = new THREE.Matrix4;
             y_up_matrix.set(
                 m[0], m[ 2], -m[ 1], m[3],
-		m[4], m[ 6], -m[ 5], m[7],
-		m[8], m[ 10], -m[ 9], m[11],
-		m[12], m[14], -m[13], m[15],
+                m[4], m[ 6], -m[ 5], m[7],
+                m[8], m[ 10], -m[ 9], m[11],
+                m[12], m[14], -m[13], m[15],
             );
             y_up_matrix.transpose();
             
@@ -430,12 +457,14 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             mesh.add(line);
             
             scene.add(mesh);
+
+            rerender();
         };
         
         self.destroy = function() {
             scene.traverse(object => {
         	if (!object.isMesh) return
-        	object.geometry.dispose();
+        	    object.geometry.dispose();
             });
         };
     }
