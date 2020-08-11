@@ -230,7 +230,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     var obj = scene.getObjectById(id);
                     obj.material = self.previousMaterials.get(id);
                     self.previousMaterials.delete(id);
-                    obj.children[0].material = lineMaterial;
+                    if (obj.children.length) {
+                        obj.children[0].material = lineMaterial;
+                    }
                 }
             }
             for (id of self.selected) {
@@ -238,7 +240,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     var obj = scene.getObjectById(id);
                     self.previousMaterials.set(id, obj.material);
                     obj.material = createSelectionMaterial(obj.material);
-                    obj.children[0].material = lineSelectionMaterial;
+                    if (obj.children.length) {
+                        obj.children[0].material = lineSelectionMaterial;
+                    }
                 }
             }
             rerender();

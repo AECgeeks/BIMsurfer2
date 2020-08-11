@@ -146,7 +146,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             });
         }
 
-        this.setSpinner = function(url) {
+        this.setSpinner = function(args) {
+            if (args.url) {
             self.spinner = new Image();
             self.spinner.src= url;
             self.spinner.onload = function() {
@@ -154,6 +155,11 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
                 document.body.appendChild(self.spinner);
             }            
+            } else if (args.className) {
+            self.spinner = document.createElement('div');
+            self.spinner.className = args.className;
+            document.body.appendChild(self.spinner);
+            }
         }
         
         this.loadMetadata = function(domNode) {            
