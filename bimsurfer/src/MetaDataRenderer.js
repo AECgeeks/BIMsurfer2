@@ -129,7 +129,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     resolve(args.model);
                 } else {
                     var fn = args.src ? loadModelFromSource : loadModelFromJson;
-                    fn(args.src).then(function(m) {
+                    fn(args.src ? args.src : args.json).then(function(m) {
                         models[args.id] = m;
                         resolve(m);
                     });

@@ -106,26 +106,64 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             return function(arg0, arg1) {
                 fn(arg, arg0, arg1);
             }
-        }        
+        }
+
+        this.spinner = null;
+        this.requestsInProgress = 0;
+        this.incrementRequestsInProgress = function() {
+            self.requestsInProgress++;
+            self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+        }
+        this.decrementRequestsInProgress = function() {
+            self.requestsInProgress--;
+            self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+        }
+
+        this.loadXmlPromise = null;
+        this.loadXml = function() {
+            if (self.loadXmlPromise) {
+                return self.loadXmlPromise;
+            }
+            self.incrementRequestsInProgress();
+            return self.loadXmlPromise = Request.Make({url: modelPath + ".xml"}).then(function(xml) {
+                var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                self.decrementRequestsInProgress();
+                return json;
+            });
+        }
 
         this.loadTreeView = function(domNode) {
             var tree = new StaticTreeRenderer({
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle
+            });            
+            return self.loadXml().then(function(json) {
+                tree.addModel({id: 1, json: json});
+                tree.build();
+                self.treeView = tree;
+                tree.on('click', makePartial(processSelectionEvent, tree));
+                tree.on('visibility-changed', bimSurfer.setVisibility);
             });
-            tree.addModel({id: 1, src: modelPath + ".xml"});
-            tree.build();
-            self.treeView = tree;
-            tree.on('click', makePartial(processSelectionEvent, tree));
-            tree.on('visibility-changed', bimSurfer.setVisibility);
+        }
+
+        this.setSpinner = function(url) {
+            self.spinner = new Image();
+            self.spinner.src= url;
+            self.spinner.onload = function() {
+                self.spinner.style = 'position: fixed; top: 50%; left: 50%; margin-top: -' + self.spinner.height / 2 + 'px; margin-left: -' + self.spinner.width / 2 + 'px';
+                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+                document.body.appendChild(self.spinner);
+            }            
         }
         
         this.loadMetadata = function(domNode) {            
             var data = new MetaDataRenderer({
                 domNode: domNode
             });
-            data.addModel({id: 1, src: modelPath + ".xml"});
-            self.metaDataView = data;        
+            this.loadXml().then(function(json) {
+                data.addModel({id: 1, json: json});
+                self.metaDataView = data;
+            });
         };
         
         this.load2d = function() {
@@ -134,11 +172,16 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 engine: 'svg'
             });
         
-            bimSurfer2D.load({
+            self.incrementRequestsInProgress();
+            var P = bimSurfer2D.load({
                 src: modelPath
+            }).then(function() {
+                self.decrementRequestsInProgress();
             });
             
             bimSurfer2D.on("selection-changed", makePartial(processSelectionEvent, bimSurfer2D));
+
+            return P;
         };
         
         this.destroy = function() {
@@ -156,6 +199,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         this.load3d = function(part, baseId) {
         
+            self.incrementRequestsInProgress();
             var P = bimSurfer.load({
                 src: modelPath + (part ? `/${part}`: (baseId || ''))
             }).then(function (model) {
@@ -180,6 +224,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                     bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
                 });
                 }
+
+                self.decrementRequestsInProgress();
                 
             });
             

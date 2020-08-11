@@ -93,7 +93,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         
         this.addModel = function(args) {
             models.push(args);
-            if (args.src) {
+            if (args.src || args.json) {
                 fromXml = true;
             }
         };
