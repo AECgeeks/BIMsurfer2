@@ -34,6 +34,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         var modelPath = `${origin}/m/${args.modelId}`;
 
         function mapFrom(view, objectIds) {
+            var mapped;
             if (view.engine === 'svg') {
                 mapped = objectIds.map((id) => {
                     return id.replace(/product-/g, '');
@@ -112,11 +113,15 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         this.requestsInProgress = 0;
         this.incrementRequestsInProgress = function() {
             self.requestsInProgress++;
-            self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+            if (self.spinner) {
+                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+            }
         }
         this.decrementRequestsInProgress = function() {
             self.requestsInProgress--;
-            self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+            if (self.spinner) {
+                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+            }
         }
 
         this.loadXmlPromise = null;

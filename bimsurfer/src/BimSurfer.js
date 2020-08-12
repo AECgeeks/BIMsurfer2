@@ -1,14 +1,16 @@
 window.BIMSERVER_VERSION = "1.5";
 
-define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer", "./EventHandler", "./svgViewer/svgViewer", "./threeViewer/threeViewer"], function (Notifier, Model, PreloadQuery, GeometryLoader, XeoViewer, EventHandler, SvgViewer, ThreeViewer, _BimServerApi) {
+define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer",*/ "./EventHandler", "./svgViewer/svgViewer", "./threeViewer/threeViewer"], function (/*Notifier, Model, PreloadQuery, GeometryLoader, XeoViewer,*/ EventHandler, SvgViewer, ThreeViewer, _BimServerApi) {
 	
     // Backwards compatibility
+    /*
     var BimServerApi;
     if (_BimServerApi) {
         BimServerApi = _BimServerApi;
     } else {
         BimServerApi = window.BimServerClient;
     }
+    */
     
     function BimSurfer(cfg) {
 
@@ -21,7 +23,7 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
         self.engine = (cfg.engine || "xeogl").toLowerCase();
         var engine = {
             svg: SvgViewer,
-            xeogl: XeoViewer,
+            xeogl: window.XeoViewer,
             threejs: ThreeViewer
         }[self.engine];
         
@@ -65,7 +67,7 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
             } else if (params.api) {
                 return this._loadFromAPI(params);
 
-            } else if (params.src && (self.viewer instanceof XeoViewer || self.viewer instanceof ThreeViewer)) {
+            } else if (params.src && ((window.XeoViewer && self.viewer instanceof XeoViewer) || self.viewer instanceof ThreeViewer)) {
                 return this._loadFrom_glTF(params);
             } else if (params.src && self.viewer instanceof SvgViewer) {
                 return this._loadFrom_SVG(params);
@@ -149,7 +151,7 @@ define(["./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometry
                 return new Promise(function (resolve, reject) {
                     var m = viewer.loadglTF(params.src);
                     
-                    if (self.viewer instanceof XeoViewer) {
+                    if (window.XeoViewer && self.viewer instanceof XeoViewer) {
                         m.on("loaded", function() {						
                             viewer.scene.canvas.spinner.on('processes', function(n) {
                             if (n === 0) {
