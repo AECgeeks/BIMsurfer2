@@ -222,6 +222,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         }
         
         self._onload = function() {
+            if (self.error) {
+                return;
+            }
+            
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
             self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;
             self.reset({colors:true});
