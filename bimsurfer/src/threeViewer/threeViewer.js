@@ -397,13 +397,16 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             }
             params.ids.forEach((id) => {
                 var id2 = self.nameToId.get(id);
-                if (scene.getObjectById(id2).type === 'Group') {
-                    // Handle objects with multiple materials which become groups
-                    for (var c of scene.getObjectById(id2).children) {
-                        self.selected.add(c.id);
+                var node = scene.getObjectById(id2);
+                if (node) {
+                    if (node.type === 'Group') {
+                        // Handle objects with multiple materials which become groups
+                        for (var c of scene.getObjectById(id2).children) {
+                            self.selected.add(c.id);
+                        }
+                    } else {
+                        self.selected.add(id2);
                     }
-                } else {
-                    self.selected.add(id2);
                 }
             });
             self._updateState();
