@@ -66,7 +66,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.gammaFactor = 2.2;
-        renderer.sortObjects = false;
+        // @tfk sortObjects still needs to be enabled for correctly rendering the transparency overlay
+        // renderer.sortObjects = false;
 
         var rerender = () => renderer.render(scene, camera);
 
