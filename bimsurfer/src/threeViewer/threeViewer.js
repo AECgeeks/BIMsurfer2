@@ -224,6 +224,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self._updateState = function() {
+            var id;
             for (id of Array.from(self.previousMaterials.keys())) {
                 if (!self.selected.has(id)) {
                     // restore
