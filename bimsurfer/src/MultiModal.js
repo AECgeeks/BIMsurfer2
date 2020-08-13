@@ -89,7 +89,9 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 [bimSurfer, bimSurfer2D, self.treeView, self.metaDataView].forEach((view) => {
                     if (view && view !== source) {
                         if (view.setSelection) {
-                            view.setSelection({ids: mapTo(view, objectIds), clear: true, selected: true});
+                            if (!(view.viewer && view.viewer.error)) {
+                                view.setSelection({ids: mapTo(view, objectIds), clear: true, selected: true});
+                            }
                         } else {
                             view.setSelected(mapTo(view, objectIds), view.SELECT_EXCLUSIVE);
                         }
