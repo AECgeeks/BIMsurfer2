@@ -20,7 +20,7 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
 
         cfg = cfg || {};
         
-        self.engine = (cfg.engine || "xeogl").toLowerCase();
+        self.engine = (cfg.engine || "threejs").toLowerCase();
         var engine = {
             svg: SvgViewer,
             xeogl: window.XeoViewer,
