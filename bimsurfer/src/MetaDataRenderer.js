@@ -149,7 +149,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
                 if (typeof(v) !== 'undefined') {
-                    r = s.addRow();
+                    var r = s.addRow();
                     r.setName(k);
                     r.setValue(v);
                 }
