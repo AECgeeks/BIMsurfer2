@@ -112,13 +112,13 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         line.style.cssText = "fill: none; stroke: lime; stroke-width: 3px";
                         self.lineMapping.set(n, line);
                         // children[0] is the pan-zoom viewport
-                        self.svg.children[0].appendChild(line);
+                        self.rootGroup.appendChild(line);
                     }
                 }
             } else {
                 if (self.lineMapping.has(n)) {
                     // the groups do not get a line
-                    self.svg.children[0].removeChild(self.lineMapping.get(n));
+                    self.rootGroup.removeChild(self.lineMapping.get(n));
                     self.lineMapping.delete(n);
                 }
                 for (let c of n.children) {
@@ -213,10 +213,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                     n = n.parentElement;
                 }
-                var visible = storeyVisible && !Array.from(t.parentElement.querySelectorAll('path')).some((path) => {
+                var visible = storeyVisible && (t.parentElement.className.baseVal == 'IfcAnnotation' || !Array.from(t.parentElement.querySelectorAll('path')).some((path) => {
                     return testOverlap(t, path)
-                });
-                // t.style.display = visible ? 'inline' : 'none';
+                }));
                 t.style.visibility = visible ? 'visible' : 'hidden';
             });
         }
@@ -229,7 +228,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
             self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;
             self.reset({colors:true});
-            self.storeys = Array.from(self.svg.children);
+            self.storeys = Array.from(self.svg.children).filter(n => n.tagName == 'g');
             self.guidToIdMap = new Map();
             const traverse = (e) => {
                 const id = e.getAttribute('id');
@@ -266,7 +265,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             });
             self.textNodes = Array.from(self.svg.querySelectorAll('text'));        
             const updateZoom = (scale) => { 
-                self.svg.style.fontSize = 10 / self.svg.children[0].transform.baseVal[0].matrix.a + "pt";
+                self.svg.style.fontSize = 10 / self.rootGroup.transform.baseVal[0].matrix.a + "pt";
                 self.updateTextVisibility();
             };
             self.spz = svgPanZoom(self.obj.contentDocument ? self.obj : self.obj.getElementsByTagName('svg')[0], {
@@ -275,6 +274,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
               controlIconsEnabled: false,
               onZoom: updateZoom
             });
+            self.rootGroup = Array.from(self.svg.children).filter(n => n.tagName == 'g')[0];
             updateZoom();
             svgDoc.onclick = function(evt) {
                 let n = evt.target;
