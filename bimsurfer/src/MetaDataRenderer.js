@@ -123,18 +123,23 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         var domNode = document.getElementById(args['domNode']);
         
         this.addModel = function(args) {
+            
             return new Promise(function (resolve, reject) {
                 if (args.model) {
                     models[args.id] = args.model;
                     resolve(args.model);
                 } else {
                     var fn = args.src ? loadModelFromSource : loadModelFromJson;
+           
                     fn(args.src).then(function(m) {
                         models[args.id] = m;
+                        
                         resolve(m);
                     });
                 }
             });
+
+
         };
         
         var renderAttributes = function(elem) {
@@ -251,7 +256,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         };
         
         this.setSelected = function(oid) {
-        
+           
             if (self.highlightMode) {
             
                 (self.selectedSections || []).forEach(function(s) {
@@ -278,8 +283,30 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     if (oid.length == 1) {
                         oid = [Object.keys(models)[0], oid];
                     }
-                    var model = models[oid[0]].model || models[oid[0]].apiModel;
+                    
+
+                   
+
+                   
+                    var idModel; 
+
+
+                    for(var i =0; i<Object.keys(models).length;i++){
+                        if ((models[i].model.objects[oid[1][0]] !== undefined == true)){
+                           
+                            idModel = i
+                            break;
+                        }
+                    }
+
+
+                    var model = models[idModel].model || models[idModel].apiModel;
+                    
+
+                    
                     var ob = model.objects[oid[1]];
+                    
+                    
 
                     renderAttributes(ob);
                     
@@ -307,6 +334,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             self.highlightMode = true;
             self.sections = {};
             Object.keys(models).forEach(function(m) {
+                
                 var model = models[m].model;
                 if (model.source === 'XML') {
                     Object.keys(model.objects).forEach(function(o) {

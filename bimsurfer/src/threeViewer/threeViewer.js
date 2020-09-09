@@ -17,7 +17,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         var mouse = new THREE.Vector2();
         var renderer = new THREE.WebGLRenderer({
             alpha: true,
-            antialias: true
+            antialias: true,
+	    preserveDrawingBuffer: true
         });
         var viewerContainer = document.getElementById(cfg.domNode);
 
@@ -236,6 +237,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         viewerContainer.addEventListener('click', mouseClick, false);
 
         function mouseClick(evt) {
+            
             if (mouseHasMoved) {
                 return false;
             }

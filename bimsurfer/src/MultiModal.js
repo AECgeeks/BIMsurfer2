@@ -13,7 +13,9 @@ define([
 function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
     
     function MultiModalViewer(args) {
-    
+     
+        var n_files = args.n_files
+
         EventHandler.call(this);
         
         var origin;
@@ -23,6 +25,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             origin = window.location.origin;
         }
         
+       
         var self = this;
             
         var bimSurfer = self.bimSurfer3D = new BimSurfer({
@@ -32,7 +35,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         var bimSurfer2D;
         var modelPath = `${origin}/m/${args.modelId}`;
-
+       
         function mapFrom(view, objectIds) {
             if (view.engine === 'svg') {
                 mapped = objectIds.map((id) => {
@@ -108,24 +111,50 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             }
         }        
 
-        this.loadTreeView = function(domNode) {
+        this.loadTreeView = function(domNode, part, baseId) {
             var tree = new StaticTreeRenderer({
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle
             });
-            tree.addModel({id: 1, src: modelPath + ".xml"});
+
+
+            for(var i=0;i < n_files;i++){
+                var src = modelPath + (part ? `/${part}`: (baseId || '')+"_" + i)
+                tree.addModel({id: i, src: src + ".xml"});
+              
+
+            }
+
             tree.build();
-            self.treeView = tree;
             tree.on('click', makePartial(processSelectionEvent, tree));
             tree.on('visibility-changed', bimSurfer.setVisibility);
+
+
+            self.treeView = tree;
+           
         }
         
-        this.loadMetadata = function(domNode) {            
+        this.loadMetadata = function(domNode, part,baseId) {            
             var data = new MetaDataRenderer({
                 domNode: domNode
             });
-            data.addModel({id: 1, src: modelPath + ".xml"});
-            self.metaDataView = data;        
+
+            
+            for(var i=0;i<n_files;i++){
+                var src = modelPath + (part ? `/${part}`: (baseId || '')+"_" + i)
+                
+                data.addModel({id: i, src: src + ".xml"});
+                
+            
+            
+            }
+            self.metaDataView = data;  
+
+
+
+
+
+                  
         };
         
         this.load2d = function() {
@@ -155,33 +184,38 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         }
         
         this.load3d = function(part, baseId) {
-        
-            var P = bimSurfer.load({
-                src: modelPath + (part ? `/${part}`: (baseId || ''))
-            }).then(function (model) {
-                
-                if (bimSurfer.engine === 'xeogl' && !part) {
-                // Really make sure everything is loaded.
-                Utils.Delay(100).then(function() {
-                
-                    var scene = bimSurfer.viewer.scene;
+          
+            for(var i=0;i<n_files;i++){
+
+                var src = modelPath + (part ? `/${part}`: (baseId || '')+"_" + i)
+                var P = bimSurfer.load({
+                    src:src
+                }).then(function (model) {
                     
-                    var aabb = scene.worldBoundary.aabb;
-                    var max = aabb.subarray(3);
-                    var min = aabb.subarray(0, 3);
-                    var diag = xeogl.math.subVec3(max, min, xeogl.math.vec3());
-                    var modelExtent = xeogl.math.lenVec3(diag);
-                
-                    scene.camera.project.near = modelExtent / 1000.;
-                    scene.camera.project.far = modelExtent * 100.;
+                    if (bimSurfer.engine === 'xeogl' && !part) {
+                    // Really make sure everything is loaded.
+                    Utils.Delay(100).then(function() {
                     
-                    bimSurfer.viewFit({centerModel:true});
+                        var scene = bimSurfer.viewer.scene;
+                        
+                        var aabb = scene.worldBoundary.aabb;
+                        var max = aabb.subarray(3);
+                        var min = aabb.subarray(0, 3);
+                        var diag = xeogl.math.subVec3(max, min, xeogl.math.vec3());
+                        var modelExtent = xeogl.math.lenVec3(diag);
                     
-                    bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
+                        scene.camera.project.near = modelExtent / 1000.;
+                        scene.camera.project.far = modelExtent * 100.;
+                        
+                        bimSurfer.viewFit({centerModel:true});
+                        
+                        bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
+                    });
+                    }
+                    
                 });
-                }
-                
-            });
+        
+        }
             
             bimSurfer.on("selection-changed", makePartial(processSelectionEvent, bimSurfer));
             

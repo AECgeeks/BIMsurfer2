@@ -49,6 +49,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     s = selectionState[id] = false;
                 }
                 
+                
                 domNodes[id].label.className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
             });
             
@@ -118,6 +119,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
 
             var build = function(modelId, parentId, d, n, col2) {
                 var qid = self.qualifyInstance(modelId, fromXml ? n.guid : n.id);
+
                 var label = document.createElement("div");
                 var children = document.createElement("div");
                 var children2, eye;
@@ -169,6 +171,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
                 
                 label.onclick = function(evt) {
+
+                    
                     evt.stopPropagation();
                     evt.preventDefault();
 
@@ -232,7 +236,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                     function loadModelFromJson(json) {
                         var project = Utils.FindNodeOfType(json.children[0], "decomposition")[0].children[0];
-                        build(m.id || i, null, row1cell, project, column2);
+                        // build(m.id || i, null, row1cell, project, column2);
+                        build(m.id, null, row1cell, project, column2);
                     }
                     var fn = m.src ? loadModelFromSource : loadModelFromJson;
                     fn(m.src ? m.src : m.json);
