@@ -1,4 +1,5 @@
 define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Request, Utils) {
+    "use strict";
     
     function Row(args) {
         var self = this;
@@ -144,7 +145,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
                 if (typeof(v) !== 'undefined') {
-                    r = s.addRow();
+                    let r = s.addRow();
                     r.setName(k);
                     r.setValue(v);
                 }

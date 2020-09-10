@@ -1,4 +1,5 @@
 define(function() {
+    "use strict";
     
     function make(args) {
         return new Promise(function (resolve, reject) {

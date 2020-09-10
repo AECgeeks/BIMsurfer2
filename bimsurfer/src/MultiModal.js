@@ -11,6 +11,7 @@ define([
     "bimsurfer/lib/domReady!",
 ],
 function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
+    "use strict";    
     
     function MultiModalViewer(args) {
     
@@ -34,6 +35,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         var modelPath = `${origin}/m/${args.modelId}`;
 
         function mapFrom(view, objectIds) {
+            var mapped;
             if (view.engine === 'svg') {
                 mapped = objectIds.map((id) => {
                     return id.replace(/product-/g, '');

@@ -1,4 +1,5 @@
 define(["../lib/StringView"], function(StringView) {
+    "use strict";
     
     function DataInputStreamReader(arrayBuffer) {
         

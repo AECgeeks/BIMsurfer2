@@ -1,4 +1,5 @@
 define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
+    "use strict";
 
     function ThreeViewer(cfg) {
 
@@ -118,7 +119,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         if (obj.isMesh && obj.geometry) {
                             self.originalMaterials.set(obj.id, obj.material);
 
-                            edges = new THREE.EdgesGeometry(obj.geometry);
+                            let edges = new THREE.EdgesGeometry(obj.geometry);
                             var line = new THREE.LineSegments(edges, lineMaterial);
                             obj.add(line);
                             obj.material.side = THREE.DoubleSide;
@@ -200,7 +201,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self._updateState = function() {
-            for (id of Array.from(self.previousMaterials.keys())) {
+            for (let id of Array.from(self.previousMaterials.keys())) {
                 if (!self.selected.has(id)) {
                     // restore
                     var obj = scene.getObjectById(id);
@@ -209,7 +210,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     obj.children[0].material = lineMaterial;
                 }
             }
-            for (id of self.selected) {
+            for (let id of self.selected) {
                 if (!self.previousMaterials.has(id)) {
                     var obj = scene.getObjectById(id);
                     self.previousMaterials.set(id, obj.material);
@@ -415,9 +416,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var y_up_matrix = new THREE.Matrix4;
             y_up_matrix.set(
                 m[0], m[ 2], -m[ 1], m[3],
-		m[4], m[ 6], -m[ 5], m[7],
-		m[8], m[ 10], -m[ 9], m[11],
-		m[12], m[14], -m[13], m[15],
+                m[4], m[ 6], -m[ 5], m[7],
+                m[8], m[ 10], -m[ 9], m[11],
+                m[12], m[14], -m[13], m[15]
             );
             y_up_matrix.transpose();
             
