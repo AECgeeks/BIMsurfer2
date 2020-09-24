@@ -111,7 +111,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
             var loader = new THREE.GLTFLoader();
             var draco = new THREE.DRACOLoader;
-            draco.setDecoderPath('/static/bimsurfer/lib/');
+            var threePath = Array.from(document.head.querySelectorAll("script")).map(
+                s => s.src
+            ).filter(
+                s => s.split("/").reverse()[0].startsWith("three")
+            )[0];
+            draco.setDecoderPath(threePath.substr(0, threePath.lastIndexOf("/") + 1));
             loader.setDRACOLoader(draco);
             loader.load(src + ".glb", function(gltf) {
                     scene.add(gltf.scene);
