@@ -1,5 +1,6 @@
 define(["../lib/text"], function(text) {
-
+    "use strict";
+    
     /*
     var getElementName = function(elem) {
         var name = null;

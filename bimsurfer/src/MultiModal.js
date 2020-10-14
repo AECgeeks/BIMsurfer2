@@ -11,6 +11,7 @@ define([
     "bimsurfer/lib/domReady!",
 ],
 function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
+    "use strict";    
     
     function MultiModalViewer(args) {
      

@@ -1,4 +1,5 @@
 define(function() {
+    "use strict";
     
     var xmlToJson = function(node, attributeRenamer) {
         if (node.nodeType === node.TEXT_NODE) {

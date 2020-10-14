@@ -1,4 +1,6 @@
 define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
+    "use strict";
+    
     function createElem(tag, attrs, NS) {
         const ob = NS ? document.createElementNS(NS, tag) : document.createElement(tag);
         for(let [k,v] of Object.entries(attrs || {})) {

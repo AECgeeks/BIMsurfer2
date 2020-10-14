@@ -1,5 +1,6 @@
 define(["./DataInputStreamReader"], function (DataInputStreamReader) {
-
+    "use strict";
+    
     function BimServerGeometryLoader(bimServerApi, viewer, model, roid, globalTransformationMatrix) {
 
         var o = this;

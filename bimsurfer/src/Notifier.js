@@ -1,4 +1,5 @@
-define(function() { 
+define(function() {
+    "use strict";
     
     function Notifier() {
         this.setSelector = function(selector) {

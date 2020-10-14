@@ -1,6 +1,7 @@
 window.BIMSERVER_VERSION = "1.5";
 
 define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer",*/ "./EventHandler", "./svgViewer/svgViewer", "./threeViewer/threeViewer"], function (/*Notifier, Model, PreloadQuery, GeometryLoader, XeoViewer,*/ EventHandler, SvgViewer, ThreeViewer, _BimServerApi) {
+    "use strict";
 	
     // Backwards compatibility
     /*

@@ -1,4 +1,5 @@
 define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Request, Utils) {
+    "use strict";
     
     function StaticTreeRenderer(args) {
         

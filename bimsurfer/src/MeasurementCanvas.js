@@ -1,4 +1,5 @@
 define(function() { 
+    "use strict";
 
     var MeasurementCanvas = function(scene, domNode) {
 

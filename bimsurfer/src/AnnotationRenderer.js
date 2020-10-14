@@ -1,4 +1,5 @@
 define(["./Utils"], function (Utils) {
+    "use strict";
     
     var AnnotationRenderer = function(args) {
     

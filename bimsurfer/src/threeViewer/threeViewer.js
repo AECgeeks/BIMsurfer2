@@ -1,4 +1,5 @@
 define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
+    "use strict";
 
     function ThreeViewer(cfg) {
 
@@ -243,7 +244,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                 }
             }
-            for (id of self.selected) {
+            for (let id of self.selected) {
                 if (!self.previousMaterials.has(id)) {
                     var obj = scene.getObjectById(id);
                     self.previousMaterials.set(id, obj.material);
@@ -460,7 +461,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 m[0], m[ 2], -m[ 1], m[3],
                 m[4], m[ 6], -m[ 5], m[7],
                 m[8], m[ 10], -m[ 9], m[11],
-                m[12], m[14], -m[13], m[15],
+                m[12], m[14], -m[13], m[15]
             );
             y_up_matrix.transpose();
             
