@@ -138,7 +138,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             var promises = [];
             for (var i = 0; i < n_files; i++) {
                 self.incrementRequestsInProgress();
-                var postfix = n_files ? `_${i}` : '';
+                var postfix = args.n_files ? `_${i}` : '';
                 promises.push(Request.Make({url: `${modelPath}${postfix}.xml`}).then(function(xml) {
                     var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
                     self.decrementRequestsInProgress();
@@ -235,7 +235,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
 
                 self.incrementRequestsInProgress();
                 var src = modelPath + (part ? `/${part}`: (baseId || ''));
-                if (n_files) {
+                if (args.n_files) {
                     src += "_" + i;
                 }
                 var P = bimSurfer.load({src: src}).then(function (model) {
