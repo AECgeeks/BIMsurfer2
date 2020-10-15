@@ -421,9 +421,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
         
         self.getSelection = function() {
-            elements = new Set();
+            let elements = new Set();
             self.selected.forEach((id) => {
-                obj = self.scene.getObjectById(id);
+                let obj = self.scene.getObjectById(id);
                 if (obj.name.startsWith("product-")) {
                     elements.add(obj.name.substr(8, 36));
                 } else {
