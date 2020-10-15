@@ -213,7 +213,7 @@ define(function() {
         var canvas = (self.canvas || (self.canvas = scene.canvas ? scene.canvas.canvas : document.getElementById(domNode).children[0]))
         
         var compare = function(_) {
-            [elem, attr, counter] = _;
+            let [elem, attr, counter] = _;
             if (elem[attr] != counters[counter]) {
                 counters[counter] = elem[attr];
                 return true;
