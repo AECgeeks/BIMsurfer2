@@ -289,8 +289,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var intersects = raycaster.intersectObjects(scene.children, true);
 
             var ids = [];
+            
+            var clearSelection = cfg.app.shouldClearSelection(evt);
 
-            if (!evt.shiftKey) {
+            if (clearSelection) {
                 self.selected.clear();
             }
             
@@ -298,7 +300,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             
             const processSelection = (name, geomIds) => {
                 ids.push(name);
-                selected = !(self.selected.has(geomIds[0]) && evt.shiftKey);
+                selected = !(self.selected.has(geomIds[0]) && !clearSelection);
                 const fn = selected
                     ? self.selected.add.bind(self.selected)
                     : self.selected.delete.bind(self.selected);
@@ -332,7 +334,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
             self.fire("selection-changed", [{
                 objects: ids,
-                clear: !evt.shiftKey,
+                clear: clearSelection,
                 selected: selected
             }]);
         };

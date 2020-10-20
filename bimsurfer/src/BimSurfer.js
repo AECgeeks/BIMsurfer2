@@ -28,7 +28,7 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
             threejs: ThreeViewer
         }[self.engine];
         
-        var viewer = this.viewer = new engine(cfg);
+        var viewer = this.viewer = new engine({app: this, ...cfg});
   
         /**
          * Fired whenever this BIMSurfer's camera changes.
@@ -108,6 +108,10 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
 					}, reject);
 				}
 			});
+		};
+        
+        this.shouldClearSelection = function(evt) {
+			return !evt.shiftKey;
 		};
 		
 		this._getRevisionFromServer = function (params) {

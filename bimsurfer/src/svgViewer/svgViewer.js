@@ -289,7 +289,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 }
                 self.setSelection({
                     selected: true,
-                    clear: !evt.shiftKey,
+                    clear: cfg.app.shouldClearSelection(evt),
                     nodes: nodes
                 });
             }
