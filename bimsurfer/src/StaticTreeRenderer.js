@@ -171,13 +171,12 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
                 
-                label.onclick = function(evt) {
-
-                    
+                label.onclick = function(evt) {                    
                     evt.stopPropagation();
                     evt.preventDefault();
 
-                    self.setSelected([qid], evt.shiftKey ? TOGGLE : SELECT_EXCLUSIVE);
+                    var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
+                    self.setSelected([qid], clear ? SELECT_EXCLUSIVE : TOGGLE);
                     self.fire("click", [qid, self.getSelected(true)]);
 
                     return false;

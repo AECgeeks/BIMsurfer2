@@ -34,6 +34,10 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             engine: 'threejs'
         });
         
+        if (args.multiSelect === 'click') {
+            bimSurfer.shouldClearSelection = function() { return false; };
+        }
+        
         var bimSurfer2D;
         var modelPath = `${origin}/m/${args.modelId}`;
        
@@ -203,6 +207,10 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 domNode: args.svgDomNode,
                 engine: 'svg'
             });
+            
+            if (args.multiSelect === 'click') {
+                bimSurfer2D.shouldClearSelection = function() { return false; };
+            }
         
             self.incrementRequestsInProgress();
             var P = bimSurfer2D.load({
