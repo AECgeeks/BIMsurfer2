@@ -28,7 +28,7 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
             threejs: ThreeViewer
         }[self.engine];
         
-        var viewer = this.viewer = new engine({app: this, ...cfg});
+        var viewer = this.viewer = new engine(Object.assign(cfg, {app: this}));
   
         /**
          * Fired whenever this BIMSurfer's camera changes.
