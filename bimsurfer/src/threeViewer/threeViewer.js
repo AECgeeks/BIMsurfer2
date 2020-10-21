@@ -112,6 +112,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.loadglTF = function(src) {
 
             var loader = new THREE.GLTFLoader();
+            
+            var isIE11 = !!window.MSInputMethodContext && !!document.documentMode;
+            
+            if (!isIE11) {
             var draco = new THREE.DRACOLoader;
             var threePath = Array.from(document.head.querySelectorAll("script")).map(
                 s => s.src
@@ -120,7 +124,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             )[0];
             draco.setDecoderPath(threePath.substr(0, threePath.lastIndexOf("/") + 1));
             loader.setDRACOLoader(draco);
-            loader.load(src + ".glb", function(gltf) {
+            }            
+            
+            loader.load(src + (isIE11 ? ".unoptimized" : "") + ".glb", function(gltf) {
                     scene.add(gltf.scene);
 
                     var createdLines = {};
@@ -233,7 +239,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         self._updateState = function() {
             var id;
-            for (id of Array.from(self.previousMaterials.keys())) {
+            self.previousMaterials.forEach((val, id, _) => {
                 if (!self.selected.has(id)) {
                     // restore
                     var obj = scene.getObjectById(id);
@@ -243,7 +249,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         obj.children[0].material = lineMaterial;
                     }
                 }
-            }
+            });
             for (let id of self.selected) {
                 if (!self.previousMaterials.has(id)) {
                     var obj = scene.getObjectById(id);

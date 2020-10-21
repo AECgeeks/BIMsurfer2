@@ -13,6 +13,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         return ob;
     }
     
+    function children(node) {
+        return Array.from(node.childNodes).filter(n => n.nodeType === 1);
+    }
+    
     function testOverlap(text, path) {
         var Mt = text.getScreenCTM().inverse();
         
@@ -106,7 +110,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self._updateState = function(n, parentState) {
             if (parentState || self.selected.has(n)) {
                 if (!self.lineMapping.has(n)) {
-                    for (let c of n.children) {
+                    for (let c of children(n)) {
                         self._updateState(c, true);
                     }
                     if (n.tagName == 'path') {
@@ -123,7 +127,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     self.rootGroup.removeChild(self.lineMapping.get(n));
                     self.lineMapping.delete(n);
                 }
-                for (let c of n.children) {
+                for (let c of children(n)) {
                     self._updateState(c, false);
                 }
             }
@@ -228,9 +232,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             }
             
             var svgDoc = self.obj.contentDocument || self.obj.getElementsByTagName('svg')[0];
-            self.svg = self.obj.contentDocument ? svgDoc.children[0] : svgDoc;
+            self.svg = self.obj.contentDocument ? children(svgDoc)[0] : svgDoc;
             self.reset({colors:true});
-            self.storeys = Array.from(self.svg.children).filter(n => n.tagName == 'g');
+            self.storeys = children(self.svg).filter(n => n.tagName == 'g');
             self.guidToIdMap = new Map();
             const traverse = (e) => {
                 const id = e.getAttribute('id');
@@ -243,7 +247,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     const g = Utils.CompressGuid(id2);
                     self.guidToIdMap.set(g, id2);
                 }
-                for (const c of Array.from(e.children)) {
+                for (const c of children(e)) {
                     traverse(c);
                 }
             };
@@ -256,8 +260,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 const opt = document.createElement('option');
                 
                 var N;
-                if (s.dataset.name) {
-                    N = s.dataset.name;
+                if (s.hasAttribute('data-name')) {
+                    N = s.getAttribute('data-name')
                 } else {
                     N = `storey ${i}`;
                 }
@@ -267,7 +271,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             });
             self.textNodes = Array.from(self.svg.querySelectorAll('text'));        
             const updateZoom = (scale) => { 
-                self.svg.style.fontSize = 10 / self.rootGroup.transform.baseVal[0].matrix.a + "pt";
+                self.svg.style.fontSize = 10 / self.rootGroup.transform.baseVal.getItem(0).matrix.a + "pt";
                 self.updateTextVisibility();
             };
             self.spz = svgPanZoom(self.obj.contentDocument ? self.obj : self.obj.getElementsByTagName('svg')[0], {
@@ -276,7 +280,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
               controlIconsEnabled: false,
               onZoom: updateZoom
             });
-            self.rootGroup = Array.from(self.svg.children).filter(n => n.tagName == 'g')[0];
+            self.rootGroup = children(self.svg).filter(n => n.tagName == 'g')[0];
             updateZoom();
             svgDoc.onclick = function(evt) {
                 let n = evt.target;
