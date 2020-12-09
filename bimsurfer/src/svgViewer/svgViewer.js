@@ -235,6 +235,11 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             self.svg = self.obj.contentDocument ? children(svgDoc)[0] : svgDoc;
             self.reset({colors:true});
             self.storeys = children(self.svg).filter(n => n.tagName == 'g');
+            
+            if (self.storeys.length === 0) {
+                return;
+            }
+            
             self.guidToIdMap = new Map();
             const traverse = (e) => {
                 const id = e.getAttribute('id');
