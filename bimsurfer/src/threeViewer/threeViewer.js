@@ -425,6 +425,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                 }
             });
+            if (!params.selected) {
+                params.ids.forEach((id) => {
+                    var id2 = self.nameToId.get(id)
+                    self.selected.delete(id2)
+                })
+            }
             self._updateState();
         };
         
