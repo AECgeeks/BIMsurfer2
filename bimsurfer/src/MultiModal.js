@@ -11,9 +11,12 @@ define([
     "bimsurfer/lib/domReady!",
 ],
 function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
+    "use strict";    
     
     function MultiModalViewer(args) {
-    
+     
+        var n_files = args.n_files || 1;
+
         EventHandler.call(this);
         
         var origin;
@@ -23,6 +26,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             origin = window.location.origin;
         }
         
+       
         var self = this;
             
         var bimSurfer = self.bimSurfer3D = new BimSurfer({
@@ -30,9 +34,13 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             engine: 'threejs'
         });
         
+        if (args.multiSelect === 'click') {
+            bimSurfer.shouldClearSelection = function() { return false; };
+        }
+        
         var bimSurfer2D;
         var modelPath = `${origin}/m/${args.modelId}`;
-
+       
         function mapFrom(view, objectIds) {
             var mapped;
             if (view.engine === 'svg') {
@@ -131,21 +139,28 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             if (self.loadXmlPromise) {
                 return self.loadXmlPromise;
             }
-            self.incrementRequestsInProgress();
-            return self.loadXmlPromise = Request.Make({url: modelPath + ".xml"}).then(function(xml) {
-                var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
-                self.decrementRequestsInProgress();
-                return json;
-            });
+            var promises = [];
+            for (var i = 0; i < n_files; i++) {
+                self.incrementRequestsInProgress();
+                var postfix = args.n_files ? `_${i}` : '';
+                promises.push(Request.Make({url: `${modelPath}${postfix}.xml`}).then(function(xml) {
+                    var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                    self.decrementRequestsInProgress();
+                    return json;
+                }));
+            }
+            return self.loadXmlPromise = Promise.all(promises);
         }
 
-        this.loadTreeView = function(domNode) {
+        this.loadTreeView = function(domNode, part, baseId) {
             var tree = new StaticTreeRenderer({
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle
             });            
-            return self.loadXml().then(function(json) {
-                tree.addModel({id: 1, json: json});
+            return self.loadXml().then(function(jsons) {
+                for (var i=0; i < n_files; i++) {
+                    tree.addModel({id: i, json: jsons[i]});
+                }
                 tree.build();
                 self.treeView = tree;
                 tree.on('click', makePartial(processSelectionEvent, tree));
@@ -155,35 +170,47 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
 
         this.setSpinner = function(args) {
             if (args.url) {
-            self.spinner = new Image();
-            self.spinner.src= url;
-            self.spinner.onload = function() {
-                self.spinner.style = 'position: fixed; top: 50%; left: 50%; margin-top: -' + self.spinner.height / 2 + 'px; margin-left: -' + self.spinner.width / 2 + 'px';
-                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
-                document.body.appendChild(self.spinner);
-            }            
+                self.spinner = new Image();
+                self.spinner.src= url;
+                self.spinner.onload = function() {
+                    self.spinner.style = 'position: fixed; top: 50%; left: 50%; margin-top: -' + self.spinner.height / 2 + 'px; margin-left: -' + self.spinner.width / 2 + 'px';
+                    self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+                    document.body.appendChild(self.spinner);
+                }
             } else if (args.className) {
-            self.spinner = document.createElement('div');
-            self.spinner.className = args.className;
-            document.body.appendChild(self.spinner);
+                self.spinner = document.createElement('div');
+                self.spinner.className = args.className;
+                document.body.appendChild(self.spinner);
             }
         }
+
         
-        this.loadMetadata = function(domNode) {            
+        this.loadMetadata = function(domNode, part,baseId) {
             var data = new MetaDataRenderer({
                 domNode: domNode
             });
-            this.loadXml().then(function(json) {
-                data.addModel({id: 1, json: json});
+
+            this.loadXml().then(function(jsons) {
+                for (var i = 0; i < n_files; i++) {
+                    data.addModel({id: i, json: jsons[i]});
+                }
                 self.metaDataView = data;
             });
         };
         
         this.load2d = function() {
+            // @todo 2d is currently a single image because with
+            // IfcConvert --bounds we can no longer overlay them
+            // due to the different scaling factors.
+            
             bimSurfer2D = self.bimSurfer2D = new BimSurfer({
                 domNode: args.svgDomNode,
                 engine: 'svg'
             });
+            
+            if (args.multiSelect === 'click') {
+                bimSurfer2D.shouldClearSelection = function() { return false; };
+            }
         
             self.incrementRequestsInProgress();
             var P = bimSurfer2D.load({
@@ -212,35 +239,38 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         this.load3d = function(part, baseId) {
         
-            self.incrementRequestsInProgress();
-            var P = bimSurfer.load({
-                src: modelPath + (part ? `/${part}`: (baseId || ''))
-            }).then(function (model) {
-                
-                if (bimSurfer.engine === 'xeogl' && !part) {
-                // Really make sure everything is loaded.
-                Utils.Delay(100).then(function() {
-                
-                    var scene = bimSurfer.viewer.scene;
-                    
-                    var aabb = scene.worldBoundary.aabb;
-                    var max = aabb.subarray(3);
-                    var min = aabb.subarray(0, 3);
-                    var diag = xeogl.math.subVec3(max, min, xeogl.math.vec3());
-                    var modelExtent = xeogl.math.lenVec3(diag);
-                
-                    scene.camera.project.near = modelExtent / 1000.;
-                    scene.camera.project.far = modelExtent * 100.;
-                    
-                    bimSurfer.viewFit({centerModel:true});
-                    
-                    bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
-                });
-                }
+            for(var i = 0; i < n_files; i++) {
 
-                self.decrementRequestsInProgress();
-                
-            });
+                self.incrementRequestsInProgress();
+                var src = modelPath + (part ? `/${part}`: (baseId || ''));
+                if (args.n_files) {
+                    src += "_" + i;
+                }
+                var P = bimSurfer.load({src: src}).then(function (model) {
+                    
+                    if (bimSurfer.engine === 'xeogl' && !part) {
+                    // Really make sure everything is loaded.
+                    Utils.Delay(100).then(function() {
+                    
+                        var scene = bimSurfer.viewer.scene;
+                        
+                        var aabb = scene.worldBoundary.aabb;
+                        var max = aabb.subarray(3);
+                        var min = aabb.subarray(0, 3);
+                        var diag = xeogl.math.subVec3(max, min, xeogl.math.vec3());
+                        var modelExtent = xeogl.math.lenVec3(diag);
+                    
+                        scene.camera.project.near = modelExtent / 1000.;
+                        scene.camera.project.far = modelExtent * 100.;
+                        
+                        bimSurfer.viewFit({centerModel:true});
+                        
+                        bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
+                    });
+                    }
+                    self.decrementRequestsInProgress();                    
+                });
+            }
             
             bimSurfer.on("selection-changed", makePartial(processSelectionEvent, bimSurfer));
             

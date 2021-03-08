@@ -1,4 +1,5 @@
 define(function() { 
+    "use strict";
 
     var MeasurementCanvas = function(scene, domNode) {
 
@@ -130,14 +131,14 @@ define(function() {
     var colors = ["red", "green", "blue"];
     
     [0,1,2].forEach(function(idx) {
-        marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
         marker.setAttributeNS(null, "id", "sub"+idx);
         marker.setAttributeNS(null, "markerWidth", 9);
         marker.setAttributeNS(null, "markerHeight", 9);
         marker.setAttributeNS(null, "refX", 5);
         marker.setAttributeNS(null, "refY", 5);
         
-        circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttributeNS(null, "cx", "5");
         circle.setAttributeNS(null, "cy", "5");
         circle.setAttributeNS(null, "r", "3");
@@ -212,7 +213,7 @@ define(function() {
         var canvas = (self.canvas || (self.canvas = scene.canvas ? scene.canvas.canvas : document.getElementById(domNode).children[0]))
         
         var compare = function(_) {
-            [elem, attr, counter] = _;
+            let [elem, attr, counter] = _;
             if (elem[attr] != counters[counter]) {
                 counters[counter] = elem[attr];
                 return true;
@@ -235,7 +236,6 @@ define(function() {
     });
     
     var pointToPointLines = [];
-    var mulmat4 = xeogl.math.mulMat4v4;
     var aspect = 1.;
     var enabled = false;
     
@@ -602,7 +602,7 @@ define(function() {
             };
         };
         
-        svgStyle = svg.style;
+        var svgStyle = svg.style;
         var xy = getElementXY(canvas);
         svgStyle.left = xy.x + "px";
         svgStyle.top = xy.y + "px";

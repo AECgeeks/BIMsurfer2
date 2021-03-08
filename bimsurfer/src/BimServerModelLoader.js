@@ -1,4 +1,5 @@
 define(["./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./BimSurfer"], function(BimServerModel, PreloadQuery, BimServerGeometryLoader, BimSufer) { 
+    "use strict";
     
     function BimServerModelLoader(bimServerClient, bimSurfer) {
     	

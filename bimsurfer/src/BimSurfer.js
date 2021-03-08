@@ -1,6 +1,7 @@
 window.BIMSERVER_VERSION = "1.5";
 
 define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeometryLoader", "./xeoViewer/xeoViewer",*/ "./EventHandler", "./svgViewer/svgViewer", "./threeViewer/threeViewer"], function (/*Notifier, Model, PreloadQuery, GeometryLoader, XeoViewer,*/ EventHandler, SvgViewer, ThreeViewer, _BimServerApi) {
+    "use strict";
 	
     // Backwards compatibility
     /*
@@ -27,7 +28,7 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
             threejs: ThreeViewer
         }[self.engine];
         
-        var viewer = this.viewer = new engine(cfg);
+        var viewer = this.viewer = new engine(Object.assign(cfg, {app: this}));
   
         /**
          * Fired whenever this BIMSurfer's camera changes.
@@ -107,6 +108,10 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
 					}, reject);
 				}
 			});
+		};
+        
+        this.shouldClearSelection = function(evt) {
+			return !evt.shiftKey;
 		};
 		
 		this._getRevisionFromServer = function (params) {

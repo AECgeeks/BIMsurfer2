@@ -1,4 +1,5 @@
 define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
+    "use strict";
 
     function ThreeViewer(cfg) {
 
@@ -17,7 +18,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         var mouse = new THREE.Vector2();
         var renderer = new THREE.WebGLRenderer({
             alpha: true,
-            antialias: true
+            antialias: true,
+	    preserveDrawingBuffer: true
         });
         var viewerContainer = document.getElementById(cfg.domNode);
 
@@ -110,6 +112,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         self.loadglTF = function(src) {
 
             var loader = new THREE.GLTFLoader();
+            
+            var isIE11 = !!window.MSInputMethodContext && !!document.documentMode;
+            
+            if (!isIE11) {
             var draco = new THREE.DRACOLoader;
             var threePath = Array.from(document.head.querySelectorAll("script")).map(
                 s => s.src
@@ -118,7 +124,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             )[0];
             draco.setDecoderPath(threePath.substr(0, threePath.lastIndexOf("/") + 1));
             loader.setDRACOLoader(draco);
-            loader.load(src + ".glb", function(gltf) {
+            }            
+            
+            loader.load(src + (isIE11 ? ".unoptimized" : "") + ".glb", function(gltf) {
                     scene.add(gltf.scene);
 
                     var createdLines = {};
@@ -231,7 +239,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         self._updateState = function() {
             var id;
-            for (id of Array.from(self.previousMaterials.keys())) {
+            self.previousMaterials.forEach((val, id, _) => {
                 if (!self.selected.has(id)) {
                     // restore
                     var obj = scene.getObjectById(id);
@@ -241,8 +249,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                         obj.children[0].material = lineMaterial;
                     }
                 }
-            }
-            for (id of self.selected) {
+            });
+            for (let id of self.selected) {
                 if (!self.previousMaterials.has(id)) {
                     var obj = scene.getObjectById(id);
                     self.previousMaterials.set(id, obj.material);
@@ -272,6 +280,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         viewerContainer.addEventListener('click', mouseClick, false);
 
         function mouseClick(evt) {
+            
             if (mouseHasMoved) {
                 return false;
             }
@@ -286,8 +295,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             var intersects = raycaster.intersectObjects(scene.children, true);
 
             var ids = [];
+            
+            var clearSelection = cfg.app.shouldClearSelection(evt);
 
-            if (!evt.shiftKey) {
+            if (clearSelection) {
                 self.selected.clear();
             }
             
@@ -295,7 +306,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             
             const processSelection = (name, geomIds) => {
                 ids.push(name);
-                selected = !(self.selected.has(geomIds[0]) && evt.shiftKey);
+                selected = !(self.selected.has(geomIds[0]) && !clearSelection);
                 const fn = selected
                     ? self.selected.add.bind(self.selected)
                     : self.selected.delete.bind(self.selected);
@@ -329,7 +340,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
             self.fire("selection-changed", [{
                 objects: ids,
-                clear: !evt.shiftKey,
+                clear: clearSelection,
                 selected: selected
             }]);
         };
@@ -418,9 +429,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
         
         self.getSelection = function() {
-            elements = new Set();
+            let elements = new Set();
             self.selected.forEach((id) => {
-                obj = self.scene.getObjectById(id);
+                let obj = self.scene.getObjectById(id);
                 if (obj.name.startsWith("product-")) {
                     elements.add(obj.name.substr(8, 36));
                 } else {
@@ -458,7 +469,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 m[0], m[ 2], -m[ 1], m[3],
                 m[4], m[ 6], -m[ 5], m[7],
                 m[8], m[ 10], -m[ 9], m[11],
-                m[12], m[14], -m[13], m[15],
+                m[12], m[14], -m[13], m[15]
             );
             y_up_matrix.transpose();
             

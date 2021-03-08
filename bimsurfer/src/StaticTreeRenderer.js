@@ -1,4 +1,5 @@
 define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Request, Utils) {
+    "use strict";
     
     function StaticTreeRenderer(args) {
         
@@ -48,6 +49,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 } else if (mode == DESELECT) {
                     s = selectionState[id] = false;
                 }
+                
                 
                 domNodes[id].label.className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
             });
@@ -118,6 +120,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
 
             var build = function(modelId, parentId, d, n, col2) {
                 var qid = self.qualifyInstance(modelId, fromXml ? n.guid : n.id);
+
                 var label = document.createElement("div");
                 var children = document.createElement("div");
                 var children2, eye;
@@ -168,11 +171,12 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
                 
-                label.onclick = function(evt) {
+                label.onclick = function(evt) {                    
                     evt.stopPropagation();
                     evt.preventDefault();
 
-                    self.setSelected([qid], evt.shiftKey ? TOGGLE : SELECT_EXCLUSIVE);
+                    var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
+                    self.setSelected([qid], clear ? SELECT_EXCLUSIVE : TOGGLE);
                     self.fire("click", [qid, self.getSelected(true)]);
 
                     return false;
@@ -224,16 +228,19 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 if (m.tree) {
                     build(m.id, null, row1cell, m.tree, column2);
                 } else if (m.src || m.json) {
-                    function loadModelFromSource(src) {
-                    Request.Make({url: src}).then(function(xml) {
-                        var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
-                        loadModelFromJson(json);
-                    });                    
+                    const loadModelFromSource = (src) => {
+                        Request.Make({url: src}).then(function(xml) {
+                            var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                            loadModelFromJson(json);
+                        });                    
                     }
-                    function loadModelFromJson(json) {
+                    
+                    const loadModelFromJson = (json) => {
                         var project = Utils.FindNodeOfType(json.children[0], "decomposition")[0].children[0];
-                        build(m.id || i, null, row1cell, project, column2);
+                        // build(m.id || i, null, row1cell, project, column2);
+                        build(m.id, null, row1cell, project, column2);
                     }
+                    
                     var fn = m.src ? loadModelFromSource : loadModelFromJson;
                     fn(m.src ? m.src : m.json);
                 }
