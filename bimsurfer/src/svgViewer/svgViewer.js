@@ -221,8 +221,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                     n = n.parentElement;
                 }
-                // Dimensions are always visible
-                var visible = storeyVisible && (t.parentElement.className.baseVal.includes("Dimension") || !Array.from(t.parentElement.querySelectorAll('path')).some((path) => {
+                // Dimensions and storey elevations  are always visible
+                let cls = t.parentElement.className.baseVal
+                var visible = storeyVisible && (cls.includes("Dimension") || cls.includes("IfcBuildingStorey") || !Array.from(t.parentElement.querySelectorAll('path')).some((path) => {
                     return testOverlap(t, path)
                 }));
                 t.style.visibility = visible ? 'visible' : 'hidden';
