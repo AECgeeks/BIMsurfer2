@@ -2,6 +2,8 @@ define(function() {
     "use strict";
     
     var xmlToJson = function(node, attributeRenamer) {
+        attributeRenamer = attributeRenamer || {};
+        
         if (node.nodeType === node.TEXT_NODE) {
             var v = node.nodeValue;
             if (v.match(/^\s+$/) === null) {
