@@ -64,7 +64,9 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         }
 
         function mapTo(view, objectIds) {
-            if (view instanceof StaticTreeRenderer || view instanceof MetaDataRenderer || view.engine === 'xeogl' || view.engine == 'threejs') {
+            // we now just always map to base64 guids
+            // if (view instanceof StaticTreeRenderer || view instanceof MetaDataRenderer || view.engine === 'xeogl' || view.engine == 'threejs') {
+            if (true) {
                 const conditionallyCompress = (s) => {
                     if (s.length > 22) {
                         return Utils.CompressGuid(s);
@@ -87,7 +89,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                     // Only when the user actually clicked the canvas we progate the event.
                     propagate = !!args0.clickPosition || objectIds.length == 0;   
                 }
-            } else if (source instanceof StaticTreeRenderer) {
+            } else if (source === 'user' || source instanceof StaticTreeRenderer) {
                 objectIds = mapFrom(source, args1);
             }
             
@@ -235,6 +237,10 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         this.getSelection = function() {
             return bimSurfer.getSelection().map(id => id.replace(/product-/g, '')).map(Utils.CompressGuid);
+        }
+        
+        this.setSelection = function(args) {
+            processSelectionEvent('user', 'select', args.ids);
         }
         
         this.load3d = function(part, baseId) {
