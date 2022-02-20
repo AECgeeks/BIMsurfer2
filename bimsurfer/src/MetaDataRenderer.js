@@ -76,7 +76,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 var objects = {};
                 var typeObjects = {};
                 var properties = {};
-                psets.children.forEach(function(pset) {
+                (psets.children || []).forEach(function(pset) {
                     properties[pset.guid] = pset;
                 });
                 
@@ -100,7 +100,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                             o[parent.guid].properties = o[parent.guid].properties.concat(typeObjects[g].properties);
                         }
                     }
-                    node.children.forEach(function(n) {
+                    (node.children || []).forEach(function(n) {
                         visitObject(node, n);
                     });
                 };

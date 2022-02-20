@@ -50,8 +50,11 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     s = selectionState[id] = false;
                 }
                 
-                
-                domNodes[id].label.className = s ? "bimsurfer-tree-label selected" : "bimsurfer-tree-label";
+                if (s) {
+                    domNodes[id].label.classList.add("selected");
+                } else {
+                    domNodes[id].label.classList.remove("selected");
+                }
             });
             
             var desiredViewRange = self.getSelected().map(function(id) {
@@ -126,11 +129,12 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 var children2, eye;
 
                 if (args.withVisibilityToggle) {
-                    children2 = document.createElement("div");
-                    eye = document.createElement("div");
-                    eye.className = 'bimsurfer-tree-eye';
-                    col2.appendChild(eye);
-                    col2.appendChild(children2);
+                    // children2 = document.createElement("div");
+                    eye = document.createElement("i");
+                    eye.className = 'bimsurfer-tree-eye material-icons';
+                    // col2.appendChild(eye);
+                    // col2.appendChild(children2);
+                    label.appendChild(eye)
                 }
 
                 if (!parentId) {
@@ -140,13 +144,33 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
                 
                 label.className = "bimsurfer-tree-label";
-                label.appendChild(document.createTextNode(n.name || n.guid));
+                let label_collapse = document.createElement("i");
+                label_collapse.className = "collapse material-icons";
+                label.appendChild(label_collapse);
+                if ((n.children || []).filter(x => !x["xlink:href"]).length) {
+                    label_collapse.onclick = function(evt) {
+                        evt.stopPropagation();
+                        evt.preventDefault();
+                        d.classList.toggle('bimsurfer-tree-node-collapsed');
+                    };
+                } else {
+                    label_collapse.style.visibility = 'hidden';
+                }
+
+                let label_icon = document.createElement("i");
+                label_icon.className = "icon material-icons";
+                label_icon.innerHTML = self.icons[n.type];
+                label.appendChild(label_icon);
+
+
+                label.appendChild(document.createTextNode(n.label || n.name || n.guid));
                                 
                 d.appendChild(label);
                 children.className = "bimsurfer-tree-children-with-indent";
                 d.appendChild(children);
 
                 domNodes[qid] = {label: label, eye: eye};
+
 
                 if (eye) {
                     eye.onclick = function(evt) {
@@ -193,7 +217,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     d2.className = "item";
                     children.appendChild(d2);
 
-                    if (eye) {
+                    if (false && eye) {
                         var d3 = document.createElement("div");
                         d3.className = "item";
                         children2.appendChild(d3);
@@ -202,6 +226,11 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     build(modelId, qid, d2, child, d3);
                 }
             }
+
+            fetch("https://aecgeeks.github.io/ifc-icons/ifc-full-icons.json").then(r=>r.json()).then(icons => {
+
+            self.icons = icons;
+
             models.forEach(function(m) {
                 var column1 = document.createElement("div");
                 var column2;
@@ -211,7 +240,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 row1cell.className = "item";
                 column1.appendChild(row1cell);
 
-                if (args.withVisibilityToggle) {                
+                if (false && args.withVisibilityToggle) {
                     column2 = document.createElement("div");
                     var row2cell = document.createElement("div");
 
@@ -236,7 +265,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                     
                     const loadModelFromJson = (json) => {
-                        var project = Utils.FindNodeOfType(json.children[0], "decomposition")[0].children[0];
+                        var project = Utils.FindNodeOfType(json, "decomposition")[0].children[0];
                         // build(m.id || i, null, row1cell, project, column2);
                         build(m.id, null, row1cell, project, column2);
                     }
@@ -249,6 +278,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 if (column2) {
                     domNode.appendChild(column2);
                 }
+            });
+
             });
         }
         

@@ -9,7 +9,11 @@ define(function() {
                 console.log(args.url, xhr.readyState, xhr.status)
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
-                        resolve(xhr.responseXML);
+                        if (xhr.getResponseHeader("content-type") == 'application/json') {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            resolve(xhr.responseXML);
+                        }
                     } else {
                         reject(xhr.statusText);
                     }

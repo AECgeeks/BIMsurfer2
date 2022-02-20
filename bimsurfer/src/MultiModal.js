@@ -145,11 +145,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             for (var i = 0; i < n_files; i++) {
                 self.incrementRequestsInProgress();
                 var postfix = args.n_files ? `_${i}` : '';
-                promises.push(Request.Make({url: `${modelPath}${postfix}.xml`}).then(function(xml) {
-                    var json = Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
-                    self.decrementRequestsInProgress();
-                    return json;
-                }));
+                promises.push(Request.Make({url: `${modelPath}${postfix}.tree.json`}).then(x => {self.decrementRequestsInProgress(); return x; }));
             }
             return self.loadXmlPromise = Promise.all(promises);
         }
@@ -158,15 +154,25 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             var tree = new StaticTreeRenderer({
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle
-            });            
-            return self.loadXml().then(function(jsons) {
-                for (var i=0; i < n_files; i++) {
-                    tree.addModel({id: i, json: jsons[i]});
-                }
-                tree.build();
-                self.treeView = tree;
-                tree.on('click', makePartial(processSelectionEvent, tree));
-                tree.on('visibility-changed', bimSurfer.setVisibility);
+            });
+
+            let iconPromise;
+            if (args.withTreeViewIcons) {
+                iconPromise = fetch("https://aecgeeks.github.io/ifc-icons/ifc-full-icons.json").then(r=>r.json());
+            } else {
+                iconPromise = new Promise((resolve, reject) => {resolve();});
+            }
+            iconPromise.then((potentaillyIcons) => {
+                return self.loadXml().then(function(jsons) {
+                    for (var i=0; i < n_files; i++) {
+                        tree.addModel({id: i, json: jsons[i]});
+                    }
+                    tree.icons = potentaillyIcons;
+                    tree.build();
+                    self.treeView = tree;
+                    tree.on('click', makePartial(processSelectionEvent, tree));
+                    tree.on('visibility-changed', bimSurfer.setVisibility);
+                });
             });
         }
 
@@ -242,7 +248,6 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         this.setSelection = function(args) {
             processSelectionEvent('user', 'select', args.ids);
         }
-        
         this.load3d = function(part, baseId) {
         
             for(var i = 0; i < n_files; i++) {
