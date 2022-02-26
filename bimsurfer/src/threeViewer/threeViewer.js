@@ -85,7 +85,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         scene.add(new THREE.AmbientLight(0x404050));
 
         var controls = new THREE.OrbitControls(camera, viewerContainer);
-        controls.addEventListener('change', rerender);
+        controls.addEventListener('change', () => {
+            self.fire("camera-changed", [self.getCamera()]);
+            rerender();
+        });
 
         var first = true;
 
@@ -498,6 +501,24 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         	    object.geometry.dispose();
             });
         };
+        
+        self.getCamera = function() {
+            let vecToArray = (v) => [v.x, v.y, v.z];
+            
+            return {
+                type: "PERSPECTIVE",
+                eye: vecToArray(controls.object.position),
+                target: vecToArray(controls.target)
+            };
+        }
+        
+        self.setCamera = function(obj) {
+            ["x", "y", "z"].forEach((c,i) => { 
+                controls.target0[c] = obj.target[i];
+                controls.position0[c] = obj.eye[i];
+            });
+            controls.reset();
+        }
     }
 
     ThreeViewer.prototype = Object.create(EventHandler.prototype);

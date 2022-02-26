@@ -15,6 +15,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
     
     function MultiModalViewer(args) {
      
+        let liveShareEnabled = false;
+        
         var n_files = args.n_files || 1;
 
         EventHandler.call(this);
@@ -110,6 +112,13 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 
                 if (self.onSelectionChanged) {
                     self.onSelectionChanged(objectIds);
+                }
+                
+                if (liveShareEnabled) {
+                    fetch(`/live/${LIVE_SHARE_ID}`, {
+                        method: 'POST',
+                        body: JSON.stringify({"type": "selection", "data": objectIds})
+                    });
                 }
             }
         }
@@ -309,6 +318,55 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         this.resize = function() {
             bimSurfer.resize();
+        };
+        
+        this.listen = function(path) {
+            var evtSource = new EventSource(path);
+            evtSource.onmessage = function(e) {
+                let msg = JSON.parse(e.data);
+                if (msg.type == 'camera') {
+                    self.bimSurfer3D.setCamera(msg.data);
+                } else if (msg.type == 'selection') {
+                    processSelectionEvent('user', null, msg.data);
+                }
+            }
+        };
+        
+        
+        this.toggleLiveShare = function() {
+            let timer;
+            let lastUpdate = 0;
+            
+            liveShareEnabled = !liveShareEnabled;
+            
+            var make_throttle = (delay, F) => {
+                return function(...args) {
+                    if (!liveShareEnabled) {
+                        // @todo also disable event
+                        return;
+                    }
+                    let now = performance.now();
+                    console.log(now - lastUpdate);
+                    if (now - lastUpdate < delay) {
+                        clearTimeout(timer);
+                    } else {
+                        lastUpdate = now;
+                    }
+                    timer = setTimeout(() => {
+                        console.log("fired");
+                        F(...args);
+                    }, delay);
+                }
+            }
+            
+            bimSurfer.on("camera-changed", make_throttle(200, (cam) => {
+               fetch(`/live/${LIVE_SHARE_ID}`, {
+                   method: 'POST',
+                   body: JSON.stringify({"type": "camera", "data": cam})
+               });
+            }));
+            
+            return liveShareEnabled;
         };
     }
     
