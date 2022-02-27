@@ -1,6 +1,8 @@
 define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Request, Utils) {
     "use strict";
     
+    const SPATIAL_STRUCTURE_ELEMENTS = ["IfcProject", "IfcSite", "IfcBuilding", "IfcBuildingStorey", "IfcSpace"];
+    
     function StaticTreeRenderer(args) {
         
         var self = this;        
@@ -33,11 +35,48 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         };
 
         this.parentToChildMapping = {};
+        this.childParentMapping = {};
+        this.objectTypeMapping = {};
         this.roots = [];
         
         this.setSelected = function(ids, mode) {
             if (mode == SELECT_EXCLUSIVE) {
                 self.setSelected(self.getSelected(true), DESELECT);
+            }
+
+            let decomposingParent = null;
+            let parentIds = new Set(ids.map(i => self.childParentMapping[i]));
+            if (parentIds.size === 1) {
+                [decomposingParent] = parentIds;
+                if (SPATIAL_STRUCTURE_ELEMENTS.indexOf(self.objectTypeMapping[decomposingParent]) !== -1) {
+                    decomposingParent = null;
+                }
+            }
+
+            if (decomposingParent) {
+                this.fire("selection-context-changed", [{
+                    secondary: true,
+                    selected: true,
+                    ids: self.parentToChildMapping[decomposingParent].filter(v => ids.indexOf(v) === -1)
+                }]);
+                this.fire("selection-context-changed", [{
+                    parent: true,
+                    selected: true,
+                    ids: [decomposingParent]
+                }]);
+            } else {
+                this.fire("selection-context-changed", [{
+                    secondary: true,
+                    selected: true,
+                    clear: true,
+                    ids: []
+                }]);
+                this.fire("selection-context-changed", [{
+                    parent: true,
+                    selected: true,
+                    clear: true,
+                    ids: []
+                }]);
             }
             
             ids.forEach(function(id) {        
@@ -141,6 +180,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     self.roots.push(qid);
                 } else {
                     (self.parentToChildMapping[parentId] = (self.parentToChildMapping[parentId] || [])).push(qid);
+                    self.childParentMapping[qid] = parentId;
                 }
                 
                 label.className = "bimsurfer-tree-label";
@@ -156,6 +196,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 } else {
                     label_collapse.style.visibility = 'hidden';
                 }
+
+                self.objectTypeMapping[qid] = n.type;
 
                 let label_icon = document.createElement("i");
                 label_icon.className = "icon material-icons";

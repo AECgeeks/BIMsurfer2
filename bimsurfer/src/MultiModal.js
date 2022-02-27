@@ -181,6 +181,14 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                     self.treeView = tree;
                     tree.on('click', makePartial(processSelectionEvent, tree));
                     tree.on('visibility-changed', bimSurfer.setVisibility);
+                    tree.on('selection-context-changed', (args) => {
+                        if (args.secondary) {
+                            self.bimSurfer3D.setSelection(args);
+                        }
+                        if (args.parent) {
+                            self.metaDataView.setSelectedParent(args.ids[0]);
+                        }
+                    });
                 });
             });
         }

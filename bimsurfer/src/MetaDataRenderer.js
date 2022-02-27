@@ -252,8 +252,32 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
             });
         };
+
+        let selectedParent = null;
+        let selectedElement = null;
+        let selectedElements = [];
+
+        this.setSelectedParent = function(oid) {
+            selectedParent = oid;
+            this.processSelection();
+        }
         
         this.setSelected = function(oid) {
+            // @todo this should take into account the clear flag, to detect
+            // multiple selection events from the 3d viewer, but it's not
+            // available in this handler.
+            
+            if (oid.length === 1) {
+                selectedElement = oid[0];
+            } else {
+                selectedElement = null;
+            }
+            this.processSelection();
+        }
+
+        this.processSelection = function () {
+
+            selectedElements = [selectedParent, selectedElement].filter(x => x);
            
             if (self.highlightMode) {
             
@@ -261,12 +285,12 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     s.div.className = "";
                 });
                 
-                if (oid.length) {
-                    self.sections[oid[0]].forEach(function(s) {
+                if (selectedElement) {
+                    self.sections[selectedElement].forEach(function(s) {
                         s.div.className = "selected";
                     });
                     
-                    self.selectedSections = self.sections[oid[0]];
+                    self.selectedSections = self.sections[selectedElement];
                 } else {
                     self.selectedSections = [];
                 }
@@ -275,19 +299,14 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             
                 domNode.innerHTML = "";
                 
-                if (oid.length === 1) {
+                selectedElements.forEach(oid => {
                 
-                    oid = oid[0].split(':');
+                    oid = oid.split(':');
                     if (oid.length == 1) {
                         oid = [Object.keys(models)[0], oid];
                     }
-                    
 
-                   
-
-                   
                     var idModel; 
-
 
                     for(var i =0; i<Object.keys(models).length;i++){
                         if ((models[i].model.objects[oid[1][0]] !== undefined == true)){
@@ -297,14 +316,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                         }
                     }
 
-
                     var model = models[idModel].model || models[idModel].apiModel;
                     
-
-                    
                     var ob = model.objects[oid[1]];
-                    
-                    
 
                     renderAttributes(ob);
                     
@@ -323,7 +337,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                             }
                         });
                     }
-                }
+
+                });
             
             }
         };

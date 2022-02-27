@@ -8,8 +8,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         self.allIds = [];
         self.selected = new Set();
+        self.secondarySelected = new Set();
         self.previousMaterials = new Map();
         self.originalMaterials = new Map();
+        self.secondaryOrPrimary = new Map();
         self.nameToId = new Map();
         self.three = null;
 
@@ -64,7 +66,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             color: 0xff0000,
             transparent: false
         });
+        var lineSecondarySelectionMaterial = new THREE.LineBasicMaterial({
+            color: 0xdd7011,
+            transparent: false,
+        });
         lineSelectionMaterial.depthTest = false;
+        lineSecondarySelectionMaterial.depthTest = false;
 
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.gammaFactor = 2.2;
@@ -92,9 +99,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
 
         var first = true;
 
-        function createSelectionMaterial(originalMaterial) {
-            var m = new THREE.MeshLambertMaterial({
-                color: originalMaterial.color.clone().lerp(new THREE.Color(0xff0000), 0.5)
+        function createSelectionMaterial(originalMaterial, secondary) {
+            var m = new THREE.MeshStandardMaterial({
+                color: originalMaterial.color.clone().lerp(new THREE.Color(secondary ? 0xff8000 : 0xff0000), secondary ? 0.3 : 0.7),
+                flatShading: true,
+                metalness: 0,
+                roughness: 1
             });
             m.side = THREE.DoubleSide;
             // this does not work well.
@@ -241,9 +251,12 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self._updateState = function() {
+            console.log("primary", ...self.selected);
+            console.log("secondary", ...self.secondarySelected);
+
             var id;
             self.previousMaterials.forEach((val, id, _) => {
-                if (!self.selected.has(id)) {
+                if (!(self.selected.has(id) || self.secondarySelected.has(id))) {
                     // restore
                     var obj = scene.getObjectById(id);
                     obj.material = self.previousMaterials.get(id);
@@ -253,17 +266,26 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     }
                 }
             });
-            for (let id of self.selected) {
-                if (!self.previousMaterials.has(id)) {
-                    var obj = scene.getObjectById(id);
-                    self.previousMaterials.set(id, obj.material);
-                    obj.material = createSelectionMaterial(obj.material);
-                    if (obj.children.length) {
-                        obj.children[0].material = lineSelectionMaterial;
+            [self.secondarySelected, self.selected].forEach((collection, is_primary) => {
+                for (let id of collection) {
+                    const is_unselected = !self.previousMaterials.has(id);
+                    const has_incorrect_state = self.secondaryOrPrimary.has(id) && self.secondaryOrPrimary.get(id) != is_primary
+                    if (is_unselected || has_incorrect_state) {
+                        var obj = scene.getObjectById(id);
+                        if (is_unselected) {
+                            self.previousMaterials.set(id, obj.material);
+                        }
+                        self.secondaryOrPrimary.set(id, is_primary);
+                        obj.material = createSelectionMaterial(obj.material, !is_primary);
+                        if (obj.children.length) {
+                            obj.children[0].material = is_primary
+                                ? lineSelectionMaterial
+                                : lineSecondarySelectionMaterial;
+                        }
                     }
                 }
-            }
-            rerender();
+            });
+            setTimeout(rerender, 0);
         };
 
         // We don't want drag events to be registered as clicks
@@ -411,8 +433,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self.setSelection = function(params) {
+            let collection = params.secondary ? self.secondarySelected : self.selected;
+            self.secondarySelected.clear();
             if (params.clear) {
-                self.selected.clear();
+                collection.clear();
             }
             params.ids.forEach((id) => {
                 var id2 = self.nameToId.get(id);
@@ -421,17 +445,17 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     if (node.type === 'Group') {
                         // Handle objects with multiple materials which become groups
                         for (var c of scene.getObjectById(id2).children) {
-                            self.selected.add(c.id);
+                            collection.add(c.id);
                         }
                     } else {
-                        self.selected.add(id2);
+                        collection.add(id2);
                     }
                 }
             });
             if (!params.selected) {
                 params.ids.forEach((id) => {
                     var id2 = self.nameToId.get(id)
-                    self.selected.delete(id2)
+                    collection.delete(id2)
                 })
             }
             self._updateState();
