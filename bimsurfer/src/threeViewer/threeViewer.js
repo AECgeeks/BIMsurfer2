@@ -251,9 +251,6 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self._updateState = function() {
-            console.log("primary", ...self.selected);
-            console.log("secondary", ...self.secondarySelected);
-
             var id;
             self.previousMaterials.forEach((val, id, _) => {
                 if (!(self.selected.has(id) || self.secondarySelected.has(id))) {

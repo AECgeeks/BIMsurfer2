@@ -354,14 +354,12 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                         return;
                     }
                     let now = performance.now();
-                    console.log(now - lastUpdate);
                     if (now - lastUpdate < delay) {
                         clearTimeout(timer);
                     } else {
                         lastUpdate = now;
                     }
                     timer = setTimeout(() => {
-                        console.log("fired");
                         F(...args);
                     }, delay);
                 }
