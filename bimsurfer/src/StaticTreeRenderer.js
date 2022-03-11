@@ -51,7 +51,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         
         this.setSelected = function(ids, mode) {
             if (mode == SELECT_EXCLUSIVE) {
-                self.setSelected(self.getSelected(true), DESELECT);
+                // self.setSelected(self.getSelected(true), DESELECT);
             }
 
             let decomposingParent = null;
@@ -129,7 +129,11 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
             }
             
-            this.fire("selection-changed", [self.getSelected(true)])
+            this.fire("selection-changed", [{
+                objects: self.getSelected(true),
+                clear: true,
+                selected: true
+            }]);
         };
         
         this.getSelected = function(b) {

@@ -40,6 +40,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         
         if (args.multiSelect === 'click') {
             this.shouldClearSelection = bimSurfer.shouldClearSelection = function() { return false; };
+        } else {
+            this.shouldClearSelection = bimSurfer.shouldClearSelection = function(evt) { return !evt.shiftKey; };
         }
         
         var bimSurfer2D;
@@ -87,13 +89,13 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         function processSelectionEvent(source, args0, args1) {
             var objectIds;
             var propagate = true;
-            if (source instanceof BimSurfer) {
+            if (source instanceof BimSurfer || source instanceof StaticTreeRenderer) {
                 objectIds = mapFrom(source, args0.objects);
                 if (source.engine === 'xeogl') {
                     // Only when the user actually clicked the canvas we progate the event.
                     propagate = !!args0.clickPosition || objectIds.length == 0;   
                 }
-            } else if (source === 'user' || source instanceof StaticTreeRenderer) {
+            } else if (source === 'user') {
                 objectIds = mapFrom(source, args1);
             }
             
@@ -183,7 +185,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                     tree.icons = potentaillyIcons;
                     tree.build();
                     self.treeView = tree;
-                    tree.on('click', makePartial(processSelectionEvent, tree));
+                    tree.on('selection-changed', makePartial(processSelectionEvent, tree));
                     tree.on('visibility-changed', bimSurfer.setVisibility);
                     tree.on('selection-context-changed', (args) => {
                         if (args.secondary) {
