@@ -307,6 +307,10 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 return false;
             }
 
+            if (cfg.disableSelection) {
+                return;
+            }
+
             var rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -409,7 +413,16 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         };
 
         self.setVisibility = function(params) {
-            params.ids.forEach((id) => {
+            let ids = params.clear ? self.allIds : params.ids;
+            let visibility;
+            if (params.clear) {
+                let s = new Set(params.ids);
+                visibility = (id) => { return s.has(id); };
+            } else {
+                visibility = (id) => { return params.visible; };
+            }
+
+            ids.forEach((id) => {
                 const obj = scene.getObjectById(id) || scene.getObjectById(self.nameToId.get(id));
 
                 if (!obj) return;
@@ -419,7 +432,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                     [obj];
 
                 objects.forEach((object) => {
-                    object.visible = params.visible;
+                    object.visible = visibility(id);
                 });
             });
             rerender();

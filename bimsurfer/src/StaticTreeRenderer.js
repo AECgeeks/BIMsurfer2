@@ -38,6 +38,16 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         this.childParentMapping = {};
         this.objectTypeMapping = {};
         this.roots = [];
+
+        function collect(...qids) {
+            var descendants = [];
+            var inner = function(id) {
+                descendants.push(id);
+                (self.parentToChildMapping[id] || []).forEach(inner);
+            }
+            qids.forEach(inner);
+            return descendants
+        }
         
         this.setSelected = function(ids, mode) {
             if (mode == SELECT_EXCLUSIVE) {
@@ -160,19 +170,113 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         this.build = function() {
             var domNode = document.getElementById(args['domNode']);
 
-            var build = function(modelId, parentId, d, n, col2) {
+            let styleSheet = null;
+            let styleSheet2 = null;
+            let level = 0;
+            let maxLevel = 0;
+            let mergeMode = false;
+            let itemsByLevelByName = {};
+            let firstOrrenceOfDuplicateName = {};
+            let duplicateNameIdsById = {};
+
+
+            if (args.singleLevel) {
+
+                let toggleSheet = () => {
+                    if (!styleSheet) {
+                        styleSheet = document.createElement('style');
+                        document.head.appendChild(styleSheet);
+                    }
+                    styleSheet.textContent = `
+                    .item { display: none; }
+                    .level-${level} { display: block; }
+                    `;
+                }
+
+                let toggleMergeMode = () => {
+                    if (!styleSheet2) {
+                        styleSheet2 = document.createElement('style');
+                        document.head.appendChild(styleSheet2);
+                    }
+                    mergeMode = !mergeMode;
+                    styleSheet2.textContent = `
+                    .duplicate-name { display: ${mergeMode ? 'none' : 'block'}; }
+                    .number-occurrences { display: ${mergeMode ? 'inline-block' : 'none'}; }
+                    `;
+                    if (merged) {
+                        merged.classList.toggle("checked");
+                    }
+                }
+
+                toggleSheet();
+                mergeMode = true;
+                toggleMergeMode();
+
+                var controls = document.createElement("div");
+                controls.className = "controls";
+                var levelup = document.createElement("div");
+                var leveldown = document.createElement("div");
+                var merged = document.createElement("div");
+                domNode.appendChild(controls);
+                controls.appendChild(levelup);
+                controls.appendChild(leveldown);
+                controls.appendChild(merged);
+
+                let levelupsymbol = document.createElement("i");
+                levelupsymbol.className = 'material-icons';
+                levelupsymbol.innerHTML = "arrow_back_ios_new";
+
+                let leveldownsymbol = document.createElement("i");
+                leveldownsymbol.className = 'material-icons';
+                leveldownsymbol.innerHTML = "arrow_forward_ios";
+
+                let mergesymbol = document.createElement("i");
+                mergesymbol.className = 'material-icons';
+                mergesymbol.innerHTML = "merge_type";
+
+                levelup.appendChild(levelupsymbol);
+                leveldown.appendChild(leveldownsymbol);
+                merged.appendChild(mergesymbol);
+
+                let switchLevel = (advance) => {
+                    return () => {
+                        level += advance;
+                        if (level < 0) {
+                            level = 0;
+                        }
+                        if (level > maxLevel) {
+                            level = maxLevel;
+                        }
+                        toggleSheet(level);
+                    }
+                }
+
+                levelup.onclick = switchLevel(-1);
+                leveldown.onclick = switchLevel(+1);
+                merged.onclick = toggleMergeMode;
+            }            
+
+            var build = function(modelId, parentId, parent_d, d, n, level) {
+                if (level > maxLevel) {
+                    maxLevel = level;
+                }
+
                 var qid = self.qualifyInstance(modelId, fromXml ? n.guid : n.id);
+
+                let duplicateNameWrapper;
+                if (args.singleLevel) {
+                    duplicateNameWrapper = document.createElement("div");
+                    d.appendChild(duplicateNameWrapper);
+                    d = duplicateNameWrapper;
+                }
 
                 var label = document.createElement("div");
                 var children = document.createElement("div");
-                var children2, eye;
+                var eye;
 
                 if (args.withVisibilityToggle) {
-                    // children2 = document.createElement("div");
                     eye = document.createElement("i");
                     eye.className = 'bimsurfer-tree-eye material-icons';
-                    // col2.appendChild(eye);
-                    // col2.appendChild(children2);
                     label.appendChild(eye)
                 }
 
@@ -183,36 +287,53 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     self.childParentMapping[qid] = parentId;
                 }
                 
-                label.className = "bimsurfer-tree-label";
-                let label_collapse = document.createElement("i");
-                label_collapse.className = "collapse material-icons";
-                label.appendChild(label_collapse);
-                if ((n.children || []).filter(x => !x["xlink:href"]).length) {
-                    label_collapse.onclick = function(evt) {
-                        evt.stopPropagation();
-                        evt.preventDefault();
-                        d.classList.toggle('bimsurfer-tree-node-collapsed');
-                    };
+                let nm = n.label || n.name || n.guid;
+                
+                if (args.singleLevel) {
+                    let k = `l${level}-${nm}`;
+                    let li = itemsByLevelByName[k] = itemsByLevelByName[k] || [];
+                    if (li.length) {
+                        duplicateNameWrapper.classList.add("duplicate-name");
+                    } else {
+                        firstOrrenceOfDuplicateName[k] = qid;
+                    }
+                    li.push(d);
+                    
+                    let qid0 = firstOrrenceOfDuplicateName[k];
+                    li = duplicateNameIdsById[qid0] = duplicateNameIdsById[qid0] || [];
+                    li.push(qid);
                 } else {
-                    label_collapse.style.visibility = 'hidden';
+                    label.className = "bimsurfer-tree-label";
+                    let label_collapse = document.createElement("i");
+                    label_collapse.className = "collapse material-icons";
+                    label.appendChild(label_collapse);
+                    if ((n.children || []).filter(x => !x["xlink:href"]).length) {
+                        label_collapse.onclick = function(evt) {
+                            evt.stopPropagation();
+                            evt.preventDefault();
+                            d.classList.toggle('bimsurfer-tree-node-collapsed');
+                        };
+                    } else {
+                        label_collapse.style.visibility = 'hidden';
+                    }
                 }
-
-                self.objectTypeMapping[qid] = n.type;
 
                 let label_icon = document.createElement("i");
                 label_icon.className = "icon material-icons";
                 label_icon.innerHTML = self.icons[n.type];
                 label.appendChild(label_icon);
 
+                label.appendChild(document.createTextNode(nm));
 
-                label.appendChild(document.createTextNode(n.label || n.name || n.guid));
-                                
+                self.objectTypeMapping[qid] = n.type;
+                
                 d.appendChild(label);
-                children.className = "bimsurfer-tree-children-with-indent";
-                d.appendChild(children);
+                if (!args.singleLevel) {
+                    children.className = "bimsurfer-tree-children-with-indent";
+                    d.appendChild(children);
+                }
 
                 domNodes[qid] = {label: label, eye: eye};
-
 
                 if (eye) {
                     eye.onclick = function(evt) {
@@ -220,12 +341,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                         evt.preventDefault();
 
                         var visible = !eye.classList.toggle('bimsurfer-tree-eye-off');
-                        var descendants = [];
-                        var collect = function(id) {
-                            descendants.push(id);
-                            (self.parentToChildMapping[id] || []).forEach(collect);
-                        }
-                        collect(qid);
+                        var descendants = collect(qid);
                         var fn = visible ? DOMTokenList.prototype.remove : DOMTokenList.prototype.add;
                         descendants.forEach(s => {
                             fn.call(domNodes[s].eye.classList, 'bimsurfer-tree-eye-off');
@@ -242,7 +358,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     evt.preventDefault();
 
                     var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
-                    self.setSelected([qid], clear ? SELECT_EXCLUSIVE : TOGGLE);
+
+                    let ids = mergeMode ? collect(...duplicateNameIdsById[qid]) : collect(qid);
+                    self.setSelected(ids, clear ? SELECT_EXCLUSIVE : TOGGLE);
                     self.fire("click", [qid, self.getSelected(true)]);
 
                     return false;
@@ -257,15 +375,10 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     
                     var d2 = document.createElement("div");
                     d2.className = "item";
-                    children.appendChild(d2);
+                    d2.classList.add(`level-${level+1}`);
+                    (args.singleLevel ? parent_d : children).appendChild(d2);                    
 
-                    if (false && eye) {
-                        var d3 = document.createElement("div");
-                        d3.className = "item";
-                        children2.appendChild(d3);
-                    }
-
-                    build(modelId, qid, d2, child, d3);
+                    build(modelId, qid, parent_d, d2, child, level+1);
                 }
             }
 
@@ -275,29 +388,16 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
 
             models.forEach(function(m) {
                 var column1 = document.createElement("div");
-                var column2;
                 var row1cell = document.createElement("div");
 
                 column1.className = 'bimsurfer-tree-column';
                 row1cell.className = "item";
+                row1cell.classList.add(`level-0`);
                 column1.appendChild(row1cell);
-
-                if (false && args.withVisibilityToggle) {
-                    column2 = document.createElement("div");
-                    var row2cell = document.createElement("div");
-
-                    column2.className = 'bimsurfer-tree-column';
-                    row2cell.className = "item";
-                    column2.appendChild(row2cell);
-
-                    column1.style.width = (domNode.offsetWidth - 40) + 'px'
-                    column2.style.width = '20px';
-                } else {
-                    column1.style.width = '100%';
-                }
+                column1.style.width = '100%';
 
                 if (m.tree) {
-                    build(m.id, null, row1cell, m.tree, column2);
+                    build(m.id, null, column1, row1cell, m.tree, 0);
                 } else if (m.src || m.json) {
                     const loadModelFromSource = (src) => {
                         Request.Make({url: src}).then(function(xml) {
@@ -309,7 +409,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     const loadModelFromJson = (json) => {
                         var project = Utils.FindNodeOfType(json, "decomposition")[0].children[0];
                         // build(m.id || i, null, row1cell, project, column2);
-                        build(m.id, null, row1cell, project, column2);
+                        build(m.id, null, column1, row1cell, project, 0);
                     }
                     
                     var fn = m.src ? loadModelFromSource : loadModelFromJson;
@@ -317,10 +417,16 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
 
                 domNode.appendChild(column1);
-                if (column2) {
-                    domNode.appendChild(column2);
-                }
             });
+
+            for (let items of Object.values(itemsByLevelByName)) {
+                if (items.length > 1) {
+                    let span = document.createElement("span");
+                    span.innerHTML = items.length;
+                    span.className = "number-occurrences"
+                    items[0].children[0].appendChild(span);
+                }
+            }
 
             });
         }

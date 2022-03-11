@@ -176,6 +176,10 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
                     } else {
                         viewer.on("loaded", function() {
                             resolve(viewer);
+
+                            if (cfg.initiallyInvisible) {
+                                viewer.setVisibility({ids: viewer.getObjectIds(), visible:false});
+                            }
                         });
                     }
                 });
@@ -317,7 +321,11 @@ define([/*"./Notifier", "./BimServerModel", "./PreloadQuery", "./BimServerGeomet
          * @param params
          */
         this.setSelection = function (params) {
-            return viewer.setSelection(params);
+            if (cfg.initiallyInvisible) {
+                return viewer.setVisibility(Object.assign({}, params, {visible: params.selected}));
+            } else {
+                return viewer.setSelection(params);
+            }
         };
 
         /**

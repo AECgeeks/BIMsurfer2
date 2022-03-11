@@ -33,11 +33,13 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             
         var bimSurfer = self.bimSurfer3D = new BimSurfer({
             domNode: args.domNode,
-            engine: 'threejs'
+            engine: 'threejs',
+            initiallyInvisible: args.viewerInitiallyInvisible,
+            disableSelection: args.viewerInitiallyInvisible
         });
         
         if (args.multiSelect === 'click') {
-            bimSurfer.shouldClearSelection = function() { return false; };
+            this.shouldClearSelection = bimSurfer.shouldClearSelection = function() { return false; };
         }
         
         var bimSurfer2D;
@@ -162,7 +164,9 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         this.loadTreeView = function(domNode, part, baseId) {
             var tree = new StaticTreeRenderer({
                 domNode: domNode,
-                withVisibilityToggle: args.withTreeVisibilityToggle
+                withVisibilityToggle: args.withTreeVisibilityToggle,
+                singleLevel: args.withThreeSingleLevel,
+                app: this
             });
 
             let iconPromise;
@@ -185,7 +189,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                         if (args.secondary) {
                             self.bimSurfer3D.setSelection(args);
                         }
-                        if (args.parent) {
+                        if (args.parent && self.metaDataView) {
                             self.metaDataView.setSelectedParent(args.ids[0]);
                         }
                     });
