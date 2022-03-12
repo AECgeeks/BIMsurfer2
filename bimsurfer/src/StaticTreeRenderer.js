@@ -49,9 +49,9 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             return descendants
         }
         
-        this.setSelected = function(ids, mode) {
+        this.setSelected = function(ids, mode, fire) {
             if (mode == SELECT_EXCLUSIVE) {
-                // self.setSelected(self.getSelected(true), DESELECT);
+                self.setSelected(self.getSelected(true), DESELECT, false);
             }
 
             let decomposingParent = null;
@@ -63,6 +63,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
             }
 
+            if (fire) {
             if (decomposingParent) {
                 this.fire("selection-context-changed", [{
                     secondary: true,
@@ -87,6 +88,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     clear: true,
                     ids: []
                 }]);
+            }
             }
             
             ids.forEach(function(id) {        
@@ -129,11 +131,13 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 }
             }
             
+            if (fire) {
             this.fire("selection-changed", [{
                 objects: self.getSelected(true),
                 clear: true,
                 selected: true
             }]);
+            }
         };
         
         this.getSelected = function(b) {
@@ -364,7 +368,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
 
                     let ids = mergeMode ? collect(...duplicateNameIdsById[qid]) : collect(qid);
-                    self.setSelected(ids, clear ? SELECT_EXCLUSIVE : TOGGLE);
+                    self.setSelected(ids, clear ? SELECT_EXCLUSIVE : TOGGLE, true);
                     self.fire("click", [qid, self.getSelected(true)]);
 
                     return false;
