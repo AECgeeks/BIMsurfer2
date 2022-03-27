@@ -163,14 +163,32 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             nodes.forEach(fn.bind(self.selected));                    
             nodes.forEach(updateState);
             
+            const getStoreyIdx = (n) => {
+                while (n) {
+                    let idx = self.storeys.indexOf(n);
+                    if (idx !== -1) {
+                        return idx;
+                    }
+                    n = n.parentElement;
+                }
+            }
+
+            const sids = new Set(nodes.map(getStoreyIdx));
+            if (params.clear && sids.size && !sids.has(self.select.selectedIndex)) {
+                self.select.selectedIndex = Array.from(sids).sort()[0];
+                self.toggleStorey(self.select.selectedIndex, false);
+            }
+
             if (params.nodes) {
                 const ids = params.nodes.map((n) => (n.getAttribute("id"))).map(convertId);
                 self.fire("selection-changed", [{objects: ids}]);
             }
         }
         
-        self.toggleStorey = function(i) {
-            self.setSelection({clear: true, nodes:[], selected: true});
+        self.toggleStorey = function(i, clearSelection) {
+            if (clearSelection !== false) {
+                self.setSelection({clear: true, nodes:[], selected: true});
+            }
             self.storeys.forEach((s, j)=>{
                 s.style.visibility = (i == j) ? 'visible' : 'hidden';
             });
