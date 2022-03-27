@@ -1,5 +1,14 @@
 define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
     "use strict";
+
+    // Convert XML hex guid with potential storey prefix to an IFC base64 guid
+    const convertId = (id) => {
+        let parts = id.split('-');
+        parts = parts.slice(parts.lastIndexOf('product'));
+        
+        const id2 = parts.filter(s => s !== 'product' && s !== 'body' && s !== 'storey').join('-');
+        return Utils.CompressGuid(id2);
+    }
     
     function createElem(tag, attrs, NS) {
         const ob = NS ? document.createElementNS(NS, tag) : document.createElement(tag);
@@ -142,22 +151,20 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             }
             const fn = params.selected ? self.selected.add : self.selected.delete;
 
-            const convertGuidOrIdentity = (s) => (self.guidToIdMap.get(s) || s);
-            
-            const prefix = self.legacySvgExport ? 'product-product' : 'product';
+            const convertGuidOrIdentity = (s) => (self.guidToIdMap.get(s) || [s]);
             
             var nodes = null;
             if (params.nodes) {
                 nodes = params.nodes;
             } else if (params.ids) {
-                nodes = params.ids.map(convertGuidOrIdentity).map((s)=>`${prefix}-${s}-body`).map(self.svg.getElementById.bind(self.svg)).filter((s) => (s !== null));
+                nodes = params.ids.flatMap(convertGuidOrIdentity).map(self.svg.getElementById.bind(self.svg)).filter((s) => (s !== null));
             }
             
             nodes.forEach(fn.bind(self.selected));                    
             nodes.forEach(updateState);
             
             if (params.nodes) {
-                const ids = params.nodes.map((n) => (n.getAttribute("id")));
+                const ids = params.nodes.map((n) => (n.getAttribute("id"))).map(convertId);
                 self.fire("selection-changed", [{objects: ids}]);
             }
         }
@@ -248,13 +255,11 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             const traverse = (e) => {
                 const id = e.getAttribute('id');
                 if (id !== null) {
-                    const parts = id.split('-');
-                    if (parts.filter(s => s === 'product').length == 2) {
-                        self.legacySvgExport = true;
+                    const guid = convertId(id);
+                    if (!self.guidToIdMap.has(guid)) {
+                        self.guidToIdMap.set(guid, []);
                     }
-                    const id2 = parts.filter(s => s !== 'product' && s !== 'body' && s !== 'storey').join('-');
-                    const g = Utils.CompressGuid(id2);
-                    self.guidToIdMap.set(g, id2);
+                    self.guidToIdMap.get(guid).push(id);
                 }
                 for (const c of children(e)) {
                     traverse(c);
