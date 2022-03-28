@@ -158,6 +158,17 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             for (var i = 0; i < n_files; i++) {
                 self.incrementRequestsInProgress();
                 var postfix = args.n_files ? `_${i}` : '';
+
+                promises.push(
+                        Request.Make({url: `${modelPath}${postfix}.tree.json`})
+                                .catch(
+                                        () => { return Request.Make({url: `${modelPath}${postfix}.xml`}).then(function(xml) {
+                                            return Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                                        }) }
+                                )
+                                .then(x => {self.decrementRequestsInProgress(); return x; })
+                );
+
                 promises.push(Request.Make({url: `${modelPath}${postfix}.tree.json`}).then(x => {self.decrementRequestsInProgress(); return x; }));
             }
             return self.loadXmlPromise = Promise.all(promises);
