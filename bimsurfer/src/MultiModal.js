@@ -168,8 +168,6 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                                 )
                                 .then(x => {self.decrementRequestsInProgress(); return x; })
                 );
-
-                promises.push(Request.Make({url: `${modelPath}${postfix}.tree.json`}).then(x => {self.decrementRequestsInProgress(); return x; }));
             }
             return self.loadXmlPromise = Promise.all(promises);
         }
