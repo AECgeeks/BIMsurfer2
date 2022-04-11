@@ -177,6 +177,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle,
                 singleLevel: args.withThreeSingleLevel,
+                expandUntil: args.treeExpandUntil,
                 app: this
             });
 

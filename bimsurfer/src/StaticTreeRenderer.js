@@ -316,6 +316,10 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     label_collapse.className = "collapse material-icons";
                     label.appendChild(label_collapse);
                     if ((n.children || []).filter(x => !x["xlink:href"]).length) {
+                        if ((args.expandUntil || []).indexOf(n.type) !== -1) {
+                            d.classList.toggle('bimsurfer-tree-node-collapsed');
+                        }
+
                         label_collapse.onclick = function(evt) {
                             evt.stopPropagation();
                             evt.preventDefault();
