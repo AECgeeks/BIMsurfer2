@@ -116,6 +116,8 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
                 });
         }
         
+        self.resize = function() {}
+        
         self._updateState = function(n, parentState) {
             if (parentState || self.selected.has(n)) {
                 if (!self.lineMapping.has(n)) {

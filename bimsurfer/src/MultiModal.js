@@ -390,6 +390,14 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             
             return liveShareEnabled;
         };
+        
+        this.resize = function() {
+            [bimSurfer, bimSurfer2D].forEach((surfer) => {
+                if (surfer) {
+                    surfer.resize();
+                }
+            });
+        }
     }
     
     MultiModalViewer.prototype = Object.create(EventHandler.prototype);

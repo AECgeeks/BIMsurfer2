@@ -42,6 +42,9 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         
         var camera = window.cam = new THREE.PerspectiveCamera(viewAngle, 1, nearClipping, farClipping);
         
+        // To be redefined later
+        let rerender = () => {};
+        
         self.resize = () => {
             var width = viewerContainer.offsetWidth;
             var height = viewerContainer.offsetHeight;
@@ -51,6 +54,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
             cam.aspect = width / height;
             renderer.setSize(width, height);
             camera.updateProjectionMatrix();
+            rerender();
         };
         
         self.resize();
@@ -78,7 +82,7 @@ define(["../EventHandler", "../Utils"], function(EventHandler, Utils) {
         // @tfk sortObjects still needs to be enabled for correctly rendering the transparency overlay
         // renderer.sortObjects = false;
 
-        var rerender = () => renderer.render(scene, camera);
+        rerender = () => renderer.render(scene, camera);
 
         document.getElementById(cfg.domNode).appendChild(renderer.domElement);
         renderer.setClearColor(0x000000, 0);
