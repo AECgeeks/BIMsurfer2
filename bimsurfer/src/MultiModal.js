@@ -45,7 +45,13 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
         }
         
         var bimSurfer2D;
-        var modelPath = `${origin}/m/${args.modelId}`;
+        var modelPath;
+        
+        if (args.modelId) {
+            modelPath = `${origin}/m/${args.modelId}`;
+        } else {
+            modelPath = args.modelPath;
+        }
        
         function mapFrom(view, objectIds) {
             var mapped;
