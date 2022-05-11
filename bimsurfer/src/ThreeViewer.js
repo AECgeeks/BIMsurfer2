@@ -62,6 +62,10 @@ export default class ThreeViewer extends EventHandler {
         height = 600;
       }
       this.camera.aspect = width / height;
+      if (cfg.withSSAO) {
+        this.camera.near = 1.;
+        this.camera.far = 100.;
+      }
       this.renderer.setSize(width, height);
       this.camera.updateProjectionMatrix();
       this.rerender();
@@ -73,17 +77,19 @@ export default class ThreeViewer extends EventHandler {
 
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
-    /*
-    const composer = new EffectComposer(this.renderer);
-    const ssaoPass = new SSAOPass(this.scene, this.camera, this.viewerContainer.offsetWidth, this.viewerContainer.offsetHeight);
-    ssaoPass.kernelRadius = 16;
-    composer.addPass(ssaoPass);
-    */
+    if (cfg.withSSAO) {
+      this.composer = new EffectComposer(this.renderer);
+      const ssaoPass = new SSAOPass(this.scene, this.camera, this.viewerContainer.offsetWidth, this.viewerContainer.offsetHeight);
+      ssaoPass.kernelRadius = 2;
+      ssaoPass.minDistance = 0.005;
+      ssaoPass.maxDistance = .5;
+      this.composer.addPass(ssaoPass);
+    }
 
     // @tfk sortObjects still needs to be enabled for correctly rendering the transparency overlay
     // this.renderer.sortObjects = false;
 
-    this.rerender = () => this.renderer.render(this.scene, this.camera);
+    this.rerender = () => cfg.withSSAO ? this.composer.render() : this.renderer.render(this.scene, this.camera);
 
     // We don't want drag events to be registered as clicks
     this.mouseHasMoved = false;
