@@ -1,15 +1,14 @@
-define(function() {
-    "use strict";
+export default class EventHandler {
     
-    function EventHandler() {
+    constructor() {
         this.handlers = {};
     }
     
-    EventHandler.prototype.on = function(evt, handler) {
+    on(evt, handler) {
         (this.handlers[evt] || (this.handlers[evt] = [])).push(handler);        
-    };
+    }
     
-    EventHandler.prototype.off = function(evt, handler) {
+    off(evt, handler) {
         var h = this.handlers[evt];
         var found = false;
         if (typeof(h) !== 'undefined') {
@@ -22,9 +21,9 @@ define(function() {
         if (!found) {
             throw new Error("Handler not found");
         }
-    };
+    }
     
-    EventHandler.prototype.fire = function(evt, args) {
+    fire(evt, args) {
         var h = this.handlers[evt];
         if (!h) {
             return;
@@ -32,8 +31,6 @@ define(function() {
         for (var i = 0; i < h.length; ++i) {
             h[i].apply(this, args);
         }
-    };
-    
-    return EventHandler;
-    
-});
+    }
+
+}

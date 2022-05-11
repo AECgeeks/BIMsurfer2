@@ -4,6 +4,7 @@
 	<title>BIMsurfer V2 - Demo index</title>
 </head>
 <body>
+<!--
 <h1>BIMservers</h1>
 <div id="expserver"></div>
 <div id="localhost8080"></div>
@@ -18,10 +19,12 @@
 <button id="loadProjectsBtn">Load projects</button>
 <div id="otherProjects"></div>
 </div>
+-->
 <h1>glTF</h1>
 <a href="examples/gltf.html">glTF</a>
 <script>
 document.addEventListener("DOMContentLoaded", function(event) {
+    return;
 	function loadFromBimserver(address, username, password, target) {
 		target.innerHTML = "";
 		var client = new BimServerClient(address);

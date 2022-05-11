@@ -1,412 +1,390 @@
-define([
-    'module',
-    "bimsurfer/src/BimSurfer",
-    "bimsurfer/src/StaticTreeRenderer",
-    "bimsurfer/src/MetaDataRenderer",
-    "bimsurfer/src/Request",
-    "bimsurfer/src/Utils",
-    "bimsurfer/src/AnnotationRenderer",
-    "bimsurfer/src/Assets",
-    "bimsurfer/src/EventHandler",
-    "bimsurfer/lib/domReady!",
-],
-function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, AnnotationRenderer, Assets, EventHandler) {
-    "use strict";    
-    
-    function MultiModalViewer(args) {
-     
-        let liveShareEnabled = false;
-        
-        var n_files = args.n_files || 1;
+import BimSurfer from "./BimSurfer.js";
+import {StaticTreeRenderer, SELECT_EXCLUSIVE} from "./StaticTreeRenderer.js";
+import MetaDataRenderer from "./MetaDataRenderer.js";
+import * as Request from "./Request.js";
+import * as Utils from "./Utils.js";
+import AnnotationRenderer from "./AnnotationRenderer.js";
+import * as Assets from "./Assets.js";
+import EventHandler from "./EventHandler.js";
 
-        EventHandler.call(this);
+function makePartial(fn, arg) {
+    // higher order (essentially partial function call)
+    return function(arg0, arg1) {
+        fn(arg, arg0, arg1);
+    }
+}
+
+export default class MultiModalViewer extends EventHandler {
+    
+    constructor(args) {
+        super(args)
+     
+        this.liveShareEnabled = false;
+        
+        this.args = args;
+        this.n_files = this.args.n_files || 1;
         
         var origin;
         try {
-            origin = (new URL(cfg.uri)).origin;
+            origin = new URL(import.meta.url).origin;
         } catch (e) {
             origin = window.location.origin;
-        }
-        
+        }        
        
-        var self = this;
-            
-        var bimSurfer = self.bimSurfer3D = new BimSurfer({
-            domNode: args.domNode,
+        this.bimSurfer3d = new BimSurfer({
+            domNode: this.args.domNode,
             engine: 'threejs',
-            initiallyInvisible: args.viewerInitiallyInvisible,
-            disableSelection: args.viewerInitiallyInvisible
+            initiallyInvisible: this.args.viewerInitiallyInvisible,
+            disableSelection: this.args.viewerInitiallyInvisible
         });
         
-        if (args.multiSelect === 'click') {
-            this.shouldClearSelection = bimSurfer.shouldClearSelection = function() { return false; };
+        if (this.args.multiSelect === 'click') {
+            this.shouldClearSelection = this.bimSurfer3d.shouldClearSelection = function() { return false; };
         } else {
-            this.shouldClearSelection = bimSurfer.shouldClearSelection = function(evt) { return !evt.shiftKey; };
+            this.shouldClearSelection = this.bimSurfer3d.shouldClearSelection = function(evt) { return !evt.shiftKey; };
         }
         
-        var bimSurfer2D;
-        var modelPath;
+        this.bimSurfer2d = null;
         
-        if (args.modelId) {
-            modelPath = `${origin}/m/${args.modelId}`;
+        if (this.args.modelId) {
+            this.modelPath = `${origin}/m/${this.args.modelId}`;
         } else {
-            modelPath = args.modelPath;
+            this.modelPath = this.args.modelPath;
         }
-       
-        function mapFrom(view, objectIds) {
-            var mapped;
-            if (view.engine === 'svg') {
-                mapped = objectIds.map((id) => {
-                    return id.replace(/product-/g, '');
-                }); 
-            } else if (view.engine === 'xeogl') {
-                mapped = objectIds.map(function(id) {
-                    // So, there are several options here, id can either be a glTF identifier, in which case
-                    // the id is a rfc4122 guid, or an annotation in which case it is a compressed IFC guid.
-                    if (id.substr(0, 12) === "Annotations:") {
-                        return id.substr(12);
-                    } else {
-                        return id.split("#")[1].replace(/product-/g, '');
-                    }
-                });
-            } else {
-                mapped = objectIds;
-            }
-            return mapped;
-        }
-
-        function mapTo(view, objectIds) {
-            // we now just always map to base64 guids
-            // if (view instanceof StaticTreeRenderer || view instanceof MetaDataRenderer || view.engine === 'xeogl' || view.engine == 'threejs') {
-            if (true) {
-                const conditionallyCompress = (s) => {
-                    if (s.length > 22) {
-                        return Utils.CompressGuid(s);
-                    } else {
-                        return s;
-                    }
-                }
-                return objectIds.map(conditionallyCompress);
-            } else {
-                return objectIds;
-            }
-        }
-
-        function processSelectionEvent(source, args0, args1) {
-            var objectIds;
-            var propagate = true;
-            if (source instanceof BimSurfer || source instanceof StaticTreeRenderer) {
-                objectIds = mapFrom(source, args0.objects);
-                if (source.engine === 'xeogl') {
-                    // Only when the user actually clicked the canvas we progate the event.
-                    propagate = !!args0.clickPosition || objectIds.length == 0;   
-                }
-            } else if (source === 'user') {
-                objectIds = mapFrom(source, args1);
-            }
-            
-            if (propagate) {
-                self.fire('selection-changed', [objectIds]);
-            
-                [bimSurfer, bimSurfer2D, self.treeView, self.metaDataView].forEach((view) => {
-                    if (view && view !== source) {
-                        if (view.setSelection) {
-                            if (!(view.viewer && view.viewer.error)) {
-                                view.setSelection({ids: mapTo(view, objectIds), clear: true, selected: true});
-                            }
-                        } else {
-                            view.setSelected(mapTo(view, objectIds), view.SELECT_EXCLUSIVE);
-                        }
-                    }
-                });
-                
-                if (self.onSelectionChanged) {
-                    self.onSelectionChanged(objectIds);
-                }
-                
-                if (liveShareEnabled) {
-                    fetch(`/live/${LIVE_SHARE_ID}`, {
-                        method: 'POST',
-                        body: JSON.stringify({"type": "selection", "data": objectIds})
-                    });
-                }
-            }
-        }
-
-        function makePartial(fn, arg) {
-            // higher order (essentially partial function call)
-            return function(arg0, arg1) {
-                fn(arg, arg0, arg1);
-            }
-        }
-
+        
         this.spinner = null;
         this.requestsInProgress = 0;
-        this.incrementRequestsInProgress = function() {
-            self.requestsInProgress++;
-            if (self.spinner) {
-                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
-            }
-        }
-        this.decrementRequestsInProgress = function() {
-            self.requestsInProgress--;
-            if (self.spinner) {
-                self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
-            }
-        }
-
         this.loadXmlPromise = null;
-        this.loadXml = function() {
-            if (self.loadXmlPromise) {
-                return self.loadXmlPromise;
-            }
-            var promises = [];
-            for (var i = 0; i < n_files; i++) {
-                self.incrementRequestsInProgress();
-                var postfix = args.n_files ? `_${i}` : '';
-
-                promises.push(
-                        Request.Make({url: `${modelPath}${postfix}.tree.json`})
-                                .catch(
-                                        () => { return Request.Make({url: `${modelPath}${postfix}.xml`}).then(function(xml) {
-                                            return Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
-                                        }) }
-                                )
-                                .then(x => {self.decrementRequestsInProgress(); return x; })
-                );
-            }
-            return self.loadXmlPromise = Promise.all(promises);
-        }
-
-        this.loadTreeView = function(domNode, part, baseId) {
-            var tree = new StaticTreeRenderer({
-                domNode: domNode,
-                withVisibilityToggle: args.withTreeVisibilityToggle,
-                singleLevel: args.withThreeSingleLevel,
-                expandUntil: args.treeExpandUntil,
-                app: this
-            });
-
-            let iconPromise;
-            if (args.withTreeViewIcons) {
-                iconPromise = fetch("https://aecgeeks.github.io/ifc-icons/ifc-full-icons.json").then(r=>r.json());
-            } else {
-                iconPromise = new Promise((resolve, reject) => {resolve();});
-            }
-            iconPromise.then((potentaillyIcons) => {
-                return self.loadXml().then(function(jsons) {
-                    for (var i=0; i < n_files; i++) {
-                        tree.addModel({id: i, json: jsons[i]});
-                    }
-                    tree.icons = potentaillyIcons;
-                    tree.build();
-                    self.treeView = tree;
-                    tree.on('selection-changed', makePartial(processSelectionEvent, tree));
-                    tree.on('visibility-changed', bimSurfer.setVisibility);
-                    tree.on('selection-context-changed', (args) => {
-                        if (args.secondary) {
-                            self.bimSurfer3D.setSelection(args);
-                        }
-                        if (args.parent && self.metaDataView) {
-                            self.metaDataView.setSelectedParent(args.ids[0]);
-                        }
-                    });
-                });
-            });
-        }
-
-        this.setSpinner = function(args) {
-            if (args.url) {
-                self.spinner = new Image();
-                self.spinner.src= url;
-                self.spinner.onload = function() {
-                    self.spinner.style = 'position: fixed; top: 50%; left: 50%; margin-top: -' + self.spinner.height / 2 + 'px; margin-left: -' + self.spinner.width / 2 + 'px';
-                    self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
-                    document.body.appendChild(self.spinner);
-                }
-            } else if (args.className) {
-                self.spinner = document.createElement('div');
-                self.spinner.className = args.className;
-                document.body.appendChild(self.spinner);
-            }
-        }
-
-        
-        this.loadMetadata = function(domNode, part,baseId) {
-            var data = new MetaDataRenderer({
-                domNode: domNode
-            });
-
-            this.loadXml().then(function(jsons) {
-                for (var i = 0; i < n_files; i++) {
-                    data.addModel({id: i, json: jsons[i]});
-                }
-                self.metaDataView = data;
-            });
-        };
-        
-        this.load2d = function() {
-            // @todo 2d is currently a single image because with
-            // IfcConvert --bounds we can no longer overlay them
-            // due to the different scaling factors.
-            
-            bimSurfer2D = self.bimSurfer2D = new BimSurfer({
-                domNode: args.svgDomNode,
-                engine: 'svg'
-            });
-            
-            if (args.multiSelect === 'click') {
-                bimSurfer2D.shouldClearSelection = function() { return false; };
-            }
-        
-            self.incrementRequestsInProgress();
-            var P = bimSurfer2D.load({
-                src: modelPath
-            }).then(function() {
-                self.decrementRequestsInProgress();
-            });
-            
-            bimSurfer2D.on("selection-changed", makePartial(processSelectionEvent, bimSurfer2D));
-
-            return P;
-        };
-        
-        this.destroy = function() {
-            for (const v of [self.metaDataView, self.treeView, bimSurfer2D, bimSurfer]) {
-                if (v) {
-                    v.destroy();
-                }
-            }
-            self.metaDataView = self.treeView = bimSurfer2D = bimSurfer = null; 
-        };
-        
-        this.getSelection = function() {
-            return bimSurfer.getSelection().map(id => id.replace(/product-/g, '')).map(Utils.CompressGuid);
-        }
-        
-        this.setSelection = function(args) {
-            processSelectionEvent('user', 'select', args.ids);
-        }
-        this.load3d = function(part, baseId) {
-        
-            for(var i = 0; i < n_files; i++) {
-
-                self.incrementRequestsInProgress();
-                var src = modelPath + (part ? `/${part}`: (baseId || ''));
-                if (args.n_files) {
-                    src += "_" + i;
-                }
-                var P = bimSurfer.load({src: src}).then(function (model) {
-                    
-                    if (bimSurfer.engine === 'xeogl' && !part) {
-                    // Really make sure everything is loaded.
-                    Utils.Delay(100).then(function() {
-                    
-                        var scene = bimSurfer.viewer.scene;
-                        
-                        var aabb = scene.worldBoundary.aabb;
-                        var max = aabb.subarray(3);
-                        var min = aabb.subarray(0, 3);
-                        var diag = xeogl.math.subVec3(max, min, xeogl.math.vec3());
-                        var modelExtent = xeogl.math.lenVec3(diag);
-                    
-                        scene.camera.project.near = modelExtent / 1000.;
-                        scene.camera.project.far = modelExtent * 100.;
-                        
-                        bimSurfer.viewFit({centerModel:true});
-                        
-                        bimSurfer.viewer.scene.canvas.canvas.style.display = 'block';
-                    });
-                    }
-                    self.decrementRequestsInProgress();                    
-                });
-            }
-            
-            bimSurfer.on("selection-changed", makePartial(processSelectionEvent, bimSurfer));
-            
-            return P;
-        };
-        
-        this.setColor = function(args) {
-            var viewers = [bimSurfer];
-            if (bimSurfer2D) {
-                viewers.push(bimSurfer2D);
-            }
-            viewers.forEach((v) => {
-                if (args.ids && args.ids.length) {
-                    if (args.highlight) {
-                        if (v.viewer && v.viewer.getObjectIds) {
-                            v.setColor({ids: v.viewer.getObjectIds(), color: {a: 0.1}});
-                        }
-                    }
-                    v.setColor.apply(v, arguments);
+    }
+       
+    mapFrom(view, objectIds) {
+        var mapped;
+        if (view.engine === 'svg') {
+            mapped = objectIds.map((id) => {
+                return id.replace(/product-/g, '');
+            }); 
+        } else if (view.engine === 'xeogl') {
+            mapped = objectIds.map(function(id) {
+                // So, there are several options here, id can either be a glTF identifier, in which case
+                // the id is a rfc4122 guid, or an annotation in which case it is a compressed IFC guid.
+                if (id.substr(0, 12) === "Annotations:") {
+                    return id.substr(12);
                 } else {
-                    v.reset({ colors: true });
+                    return id.split("#")[1].replace(/product-/g, '');
                 }
             });
+        } else {
+            mapped = objectIds;
+        }
+        return mapped;
+    }
+
+    mapTo(view, objectIds) {
+        // we now just always map to base64 guids
+        // if (view instanceof StaticTreeRenderer|| view instanceof MetaDataRenderer || view.engine === 'xeogl' || view.engine == 'threejs') {
+        if (true) {
+            const conditionallyCompress = (s) => {
+                if (s.length > 22) {
+                    return Utils.CompressGuid(s);
+                } else {
+                    return s;
+                }
+            }
+            return objectIds.map(conditionallyCompress);
+        } else {
+            return objectIds;
+        }
+    }
+
+    processSelectionEvent(source, args0, args1) {
+        var objectIds;
+        var propagate = true;
+        if (source instanceof BimSurfer || source instanceof StaticTreeRenderer) {
+            objectIds = this.mapFrom(source, args0.objects);
+            if (source.engine === 'xeogl') {
+                // Only when the user actually clicked the canvas we progate the event.
+                propagate = !!args0.clickPosition || objectIds.length == 0;   
+            }
+        } else if (source === 'user') {
+            objectIds = this.mapFrom(source, args1);
         }
         
-        this.resize = function() {
-            bimSurfer.resize();
-        };
+        if (propagate) {
+            this.fire('selection-changed', [objectIds]);
         
-        this.listen = function(path) {
-            var evtSource = new EventSource(path);
-            evtSource.onmessage = function(e) {
-                let msg = JSON.parse(e.data);
-                if (msg.type == 'camera') {
-                    self.bimSurfer3D.setCamera(msg.data);
-                } else if (msg.type == 'selection') {
-                    processSelectionEvent('user', null, msg.data);
-                }
-            }
-        };
-        
-        
-        this.toggleLiveShare = function() {
-            let timer;
-            let lastUpdate = 0;
-            
-            liveShareEnabled = !liveShareEnabled;
-            
-            var make_throttle = (delay, F) => {
-                return function(...args) {
-                    if (!liveShareEnabled) {
-                        // @todo also disable event
-                        return;
-                    }
-                    let now = performance.now();
-                    if (now - lastUpdate < delay) {
-                        clearTimeout(timer);
+            [this.bimSurfer3d, this.bimSurfer2d, this.treeView, this.metaDataView].forEach((view) => {
+                if (view && view !== source) {
+                    if (view.setSelection) {
+                        if (!(view.viewer && view.viewer.error)) {
+                            view.setSelection({ids: this.mapTo(view, objectIds), clear: true, selected: true});
+                        }
                     } else {
-                        lastUpdate = now;
+                        view.setSelected(this.mapTo(view, objectIds), SELECT_EXCLUSIVE);
                     }
-                    timer = setTimeout(() => {
-                        F(...args);
-                    }, delay);
-                }
-            }
-            
-            bimSurfer.on("camera-changed", make_throttle(200, (cam) => {
-               fetch(`/live/${LIVE_SHARE_ID}`, {
-                   method: 'POST',
-                   body: JSON.stringify({"type": "camera", "data": cam})
-               });
-            }));
-            
-            return liveShareEnabled;
-        };
-        
-        this.resize = function() {
-            [bimSurfer, bimSurfer2D].forEach((surfer) => {
-                if (surfer) {
-                    surfer.resize();
                 }
             });
+            
+            if (this.onSelectionChanged) {
+                this.onSelectionChanged(objectIds);
+            }
+            
+            if (this.liveShareEnabled) {
+                fetch(`/live/${LIVE_SHARE_ID}`, {
+                    method: 'POST',
+                    body: JSON.stringify({"type": "selection", "data": objectIds})
+                });
+            }
+        }
+    }
+
+    incrementRequestsInProgress() {
+        this.requestsInProgress++;
+        if (this.spinner) {
+            this.spinner.style.display = this.requestsInProgress ? 'block' : 'none';
         }
     }
     
-    MultiModalViewer.prototype = Object.create(EventHandler.prototype);
-    return MultiModalViewer;
+    decrementRequestsInProgress() {
+        this.requestsInProgress--;
+        if (this.spinner) {
+            this.spinner.style.display = this.requestsInProgress ? 'block' : 'none';
+        }
+    }
+
+    loadXml() {
+        if (this.loadXmlPromise) {
+            return this.loadXmlPromise;
+        }
+        var promises = [];
+        for (var i = 0; i < this.n_files; i++) {
+            this.incrementRequestsInProgress();
+            var postfix = this.args.n_files ? `_${i}` : '';
+
+            promises.push(
+                    Request.Make({url: `${this.modelPath}${postfix}.tree.json`})
+                            .catch(
+                                    () => { return Request.Make({url: `${this.modelPath}${postfix}.xml`}).then(function(xml) {
+                                        return Utils.XmlToJson(xml, {'Name': 'name', 'id': 'guid'});
+                                    }) }
+                            )
+                            .then(x => {this.decrementRequestsInProgress(); return x; })
+            );
+        }
+        return this.loadXmlPromise = Promise.all(promises);
+    }
+
+    loadTreeView(domNode, part, baseId) {
+        var tree = this.tree = new StaticTreeRenderer({
+            domNode: domNode,
+            withVisibilityToggle: this.args.withTreeVisibilityToggle,
+            singleLevel: this.args.withThreeSingleLevel,
+            expandUntil: this.args.treeExpandUntil,
+            app: this
+        });
+
+        let iconPromise;
+        if (this.args.withTreeViewIcons) {
+            iconPromise = fetch("https://aecgeeks.github.io/ifc-icons/ifc-full-icons.json").then(r=>r.json());
+        } else {
+            iconPromise = new Promise((resolve, reject) => {resolve();});
+        }
+        iconPromise.then((potentaillyIcons) => {
+            return this.loadXml().then((jsons) => {
+                for (var i=0; i < this.n_files; i++) {
+                    tree.addModel({id: i, json: jsons[i]});
+                }
+                tree.icons = potentaillyIcons;
+                tree.build();
+                this.treeView = tree;
+                tree.on('selection-changed', makePartial(this.processSelectionEvent.bind(this), tree));
+                tree.on('visibility-changed', this.bimSurfer3d.setVisibility.bind(this.bimSurfer3d));
+                tree.on('selection-context-changed', (args) => {
+                    if (args.secondary) {
+                        this.bimSurfer3d.setSelection(args);
+                    }
+                    if (args.parent && this.metaDataView) {
+                        this.metaDataView.setSelectedParent(args.ids[0]);
+                    }
+                });
+            });
+        });
+    }
+
+    setSpinner(spinnerArgs) {
+        if (spinnerArgs.url) {
+            this.spinner = new Image();
+            this.spinner.src= url;
+            this.spinner.onload = () => {
+                this.spinner.style = 'position: fixed; top: 50%; left: 50%; margin-top: -' + this.spinner.height / 2 + 'px; margin-left: -' + this.spinner.width / 2 + 'px';
+                this.spinner.style.display = this.requestsInProgress ? 'block' : 'none';
+                document.body.appendChild(this.spinner);
+            }
+        } else if (spinnerArgs.className) {
+            this.spinner = document.createElement('div');
+            this.spinner.className = spinnerArgs.className;
+            document.body.appendChild(this.spinner);
+        }
+    }
     
-});
+    loadMetadata(domNode, part,baseId) {
+        var data = new MetaDataRenderer({
+            domNode: domNode
+        });
+
+        this.loadXml().then((jsons) => {
+            for (var i = 0; i < this.n_files; i++) {
+                data.addModel({id: i, json: jsons[i]});
+            }
+            this.metaDataView = data;
+        });
+    }
+        
+    load2d() {
+        // @todo 2d is currently a single image because with
+        // IfcConvert --bounds we can no longer overlay them
+        // due to the different scaling factors.
+        
+        bimSurfer2d = this.bimSurfer2d = new BimSurfer({
+            domNode: this.args.svgDomNode,
+            engine: 'svg'
+        });
+        
+        if (this.args.multiSelect === 'click') {
+            bimSurfer2d.shouldClearSelection = function() { return false; };
+        }
+    
+        this.incrementRequestsInProgress();
+        var P = bimSurfer2d.load({
+            src: this.modelPath
+        }).then(this.decrementRequestsInProgress.bind(this));
+        
+        bimSurfer2d.on("selection-changed", makePartial(this.processSelectionEvent.bind(this), this.bimSurfer2d));
+
+        return P;
+    }
+        
+    destroy() {
+        for (const v of [this.metaDataView, this.treeView, bimSurfer2d, this.bimSurfer3d]) {
+            if (v) {
+                v.destroy();
+            }
+        }
+        this.metaDataView = this.treeView = bimSurfer2d = this.bimSurfer3d = null; 
+    }
+        
+    getSelection() {
+        return this.bimSurfer3d.getSelection().map(id => id.replace(/product-/g, '')).map(Utils.CompressGuid);
+    }
+        
+    setSelection(selectionArgs) {
+        this.processSelectionEvent('user', 'select', selectionArgs.ids);
+    }
+    
+    load3d(part, baseId) {
+    
+        for(var i = 0; i < this.n_files; i++) {
+
+            this.incrementRequestsInProgress();
+            var src = this.modelPath + (part ? `/${part}`: (baseId || ''));
+            if (this.args.n_files) {
+                src += "_" + i;
+            }
+            var P = this.bimSurfer3d.load({src: src}).then(this.decrementRequestsInProgress.bind(this));
+        }
+        
+        this.bimSurfer3d.on("selection-changed", makePartial(this.processSelectionEvent.bind(this), this.bimSurfer3d));
+        
+        return P;
+    }
+    
+    performOnViewers(fn, withTree) {
+        var viewers = [this.bimSurfer3d];
+        if (this.bimSurfer2d) {
+            viewers.push(this.bimSurfer2d);
+        }
+        if (withTree && this.tree) {
+            viewers.push(this.tree);
+        }
+        viewers.forEach(fn);
+    }
+        
+    setColor(colorArgs) {
+       this.performOnViewers((v) => {
+            if (colorArgs.ids && colorArgs.ids.length) {
+                if (colorArgs.highlight) {
+                    if (v.viewer && v.viewer.getObjectIds) {
+                        v.setColor({ids: v.viewer.getObjectIds(), color: {a: 0.1}});
+                    }
+                }
+                v.setColor.apply(v, arguments);
+            } else {
+                v.reset({ colors: true });
+            }
+        });
+    }
+    
+    setVisibility(vizArgs) {
+       this.performOnViewers((v) => {
+            if (vizArgs.ids && vizArgs.ids.length) {
+                v.setVisibility.apply(v, arguments);
+            } else {
+                v.reset({ colors: true });
+            }
+        }, true);
+    }
+            
+    listen = function(path) {
+        var evtSource = new EventSource(path);
+        evtSource.onmessage = function(e) {
+            let msg = JSON.parse(e.data);
+            if (msg.type == 'camera') {
+                this.bimSurfer3d.setCamera(msg.data);
+            } else if (msg.type == 'selection') {
+                this.processSelectionEvent('user', null, msg.data);
+            }
+        }
+    }        
+        
+    toggleLiveShare() {
+        let timer;
+        let lastUpdate = 0;
+        
+        this.liveShareEnabled = !this.liveShareEnabled;
+        
+        var make_throttle = (delay, F) => {
+            return function(...a) {
+                if (!this.liveShareEnabled) {
+                    // @todo also disable event
+                    return;
+                }
+                let now = performance.now();
+                if (now - lastUpdate < delay) {
+                    clearTimeout(timer);
+                } else {
+                    lastUpdate = now;
+                }
+                timer = setTimeout(() => {
+                    F(...a);
+                }, delay);
+            }
+        }
+        
+        this.bimSurfer3d.on("camera-changed", make_throttle(200, (cam) => {
+           fetch(`/live/${LIVE_SHARE_ID}`, {
+               method: 'POST',
+               body: JSON.stringify({"type": "camera", "data": cam})
+           });
+        }));
+        
+        return this.liveShareEnabled;
+    }
+        
+    resize() {
+        [this.bimSurfer3d, this.bimSurfer2d].forEach((surfer) => {
+            if (surfer) {
+                surfer.resize();
+            }
+        });
+    }
+    
+}

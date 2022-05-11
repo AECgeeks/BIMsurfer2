@@ -1,7 +1,8 @@
-define(["./Utils"], function (Utils) {
-    "use strict";
+import * as Utils from "./utils.js"
+
+export default class AnnotationRenderer {
     
-    var AnnotationRenderer = function(args) {
+    constructor(args) {
     
         var v = args.viewer;
         var m = args.model;
@@ -146,8 +147,6 @@ define(["./Utils"], function (Utils) {
             });
         }               
    
-    };
+    }
     
-    return AnnotationRenderer;
-    
-});
+}

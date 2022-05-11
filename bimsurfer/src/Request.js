@@ -1,30 +1,22 @@
-define(function() {
-    "use strict";
-    
-    function make(args) {
-        return new Promise(function (resolve, reject) {
-            var xhr = new XMLHttpRequest();
-            xhr.open(args.method || "GET", args.url, true);
-            xhr.onload = function (e) {
-                console.log(args.url, xhr.readyState, xhr.status)
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        if (xhr.getResponseHeader("content-type") == 'application/json') {
-                            resolve(JSON.parse(xhr.responseText));
-                        } else {
-                            resolve(xhr.responseXML);
-                        }
+
+export function Make(args) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open(args.method || "GET", args.url, true);
+        xhr.onload = function (e) {
+            console.log(args.url, xhr.readyState, xhr.status)
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    if (xhr.getResponseHeader("content-type") == 'application/json') {
+                        resolve(JSON.parse(xhr.responseText));
                     } else {
-                        reject(xhr.statusText);
+                        resolve(xhr.responseXML);
                     }
+                } else {
+                    reject(xhr.statusText);
                 }
-            };
-            xhr.send(null);
-        });
-    }
-    
-    return {
-        'Make': make
-    };
-    
-});
+            }
+        };
+        xhr.send(null);
+    });
+}
