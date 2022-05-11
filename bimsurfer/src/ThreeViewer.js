@@ -14,14 +14,15 @@ const lineMaterial = new THREE.LineBasicMaterial({
 });
 const lineSelectionMaterial = new THREE.LineBasicMaterial({
   color: 0xff0000,
-  transparent: false,
+  // transparent = true, needed apparently to get depthTest to properly function?
+  transparent: true,
+  depthTest: false,
 });
 const lineSecondarySelectionMaterial = new THREE.LineBasicMaterial({
   color: 0xdd7011,
-  transparent: false,
+  transparent: true,
+  depthTest: false,
 });
-lineSelectionMaterial.depthTest = false;
-lineSecondarySelectionMaterial.depthTest = false;
 
 export default class ThreeViewer extends EventHandler {
   constructor(cfg) {

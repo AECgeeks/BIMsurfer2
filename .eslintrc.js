@@ -18,6 +18,7 @@ module.exports = {
     'no-var': 'off',
     'no-mixed-spaces-and-tabs': 'off',
     'no-tabs': 'off',
-    'new-cap': 'off'
+    'new-cap': 'off',
+    'linebreak-style': 'off',
   },
 };
