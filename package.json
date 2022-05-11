@@ -1,0 +1,18 @@
+{
+  "name": "bimsurfer",
+  "version": "1.0.0",
+  "description": "- [Introduction](#introduction)\r - [Usage](#usage)\r   - [BIMSurfer](#bimsurfer)\r   - [Objects](#objects)\r     - [Selecting and deselecting objects](#selecting-and-deselecting-objects)\r     - [Showing and hiding objects](#showing-and-hiding-objects)\r     - [Changing color and transparency of objects](#changing-color-and-transparency-of-objects)\r   - [Camera](#camera)\r     - [Controlling the camera](#controlling-the-camera)\r     - [Fitting objects in view](#fitting-objects-in-view)\r   - [Resetting](#resetting)\r     - [Camera](#camera-1)\r     - [Objects](#objects-1)",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0"
+  }
+}

@@ -85,7 +85,6 @@ function loadModelFromJson(json) {
     });
 
     var visitObject = function(parent, node) {
-      const props = [];
       const o = (parent && parent.ObjectPlacement) ? objects : typeObjects;
 
       if (node['xlink:href']) {
@@ -241,7 +240,7 @@ export default class MetaDataRenderer extends EventHandler {
         });
         console.log(containedInPset);
         if (!containedInPset.some(identity)) {
-          reject();
+          reject(new Error(''));
         }
       } else {
         ob.getIsDefinedBy(function(isDefinedBy) {

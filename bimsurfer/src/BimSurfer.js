@@ -109,14 +109,14 @@ export default class BimSurfer extends EventHandler {
   }
 
   _getRevisionFromServer(params) {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       if (params.roid) {
         resolve(params);
       } else {
-        params.api.call('ServiceInterface', 'getAllRelatedProjects', {poid: params.poid}, function(data) {
+        params.api.call('ServiceInterface', 'getAllRelatedProjects', {poid: params.poid}, (data) => {
           let resolved = false;
 
-          data.forEach(function(projectData) {
+          data.forEach((projectData) => {
             if (projectData.oid == params.poid) {
               params.roid = projectData.lastRevisionId;
               params.schema = projectData.schema;
@@ -130,7 +130,7 @@ export default class BimSurfer extends EventHandler {
           });
 
           if (!resolved) {
-            reject();
+            reject(new Error(''));
           }
         }, reject);
       }
@@ -151,8 +151,8 @@ export default class BimSurfer extends EventHandler {
         const m = this.viewer.loadglTF(params.src);
 
         if (window.XeoViewer && this.viewer instanceof XeoViewer) {
-          m.on('loaded', function() {
-            this.viewer.scene.canvas.spinner.on('processes', function(n) {
+          m.on('loaded', () => {
+            this.viewer.scene.canvas.spinner.on('processes', (n) => {
               if (n === 0) {
                 this.viewer.viewFit({});
                 resolve(m);
@@ -181,29 +181,28 @@ export default class BimSurfer extends EventHandler {
   }
 
   _loadFromAPI(params) {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       params.api.getModel(params.poid, params.roid, params.schema, false,
-          function(model) {
+          (model) => {
             // TODO: Preload not necessary combined with the bruteforce tree
             let fired = false;
 
-            model.query(PreloadQuery,
-                function() {
-                  if (!fired) {
-                    fired = true;
-                    const vmodel = new Model(params.api, model);
+            model.query(PreloadQuery, () => {
+              if (!fired) {
+                fired = true;
+                const vmodel = new Model(params.api, model);
 
-                    this._loadModel(vmodel);
+                this._loadModel(vmodel);
 
-                    resolve(vmodel);
-                  }
-                });
+                resolve(vmodel);
+              }
+            });
           });
     });
   }
 
   _loadModel(model) {
-    model.getTree().then(function(tree) {
+    model.getTree().then((tree) => {
       const oids = [];
       const oidToGuid = {};
       const guidToOid = {};
@@ -240,7 +239,7 @@ export default class BimSurfer extends EventHandler {
 
       const loader = new GeometryLoader(model.api, models, this.viewer);
 
-      loader.addProgressListener(function(progress, nrObjectsRead, totalNrObjects) {
+      loader.addProgressListener((progress, nrObjectsRead, totalNrObjects) => {
         if (progress == 'start') {
           console.log('Started loading geometries');
           this.fire('loading-started');

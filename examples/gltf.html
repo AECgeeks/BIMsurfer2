@@ -9,15 +9,28 @@
     <link rel="stylesheet" href="../css/metadata.css"/>
     <link rel="stylesheet" href="../css/tree.css"/>
     
-    <script type="text/javascript" src="../bimsurfer/lib/three.js"></script>
-    <script type="text/javascript" src="../bimsurfer/lib/OrbitControls.js"></script>
-    <script type="text/javascript" src="../bimsurfer/lib/GLTFLoader.js"></script>
-    <script type="text/javascript" src="../bimsurfer/lib/DRACOLoader.js"></script>
-        
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "../bimsurfer/lib/three/r140/three.module.js"
+        }
+    }
+    </script>
+
     <script type="module">
         import MultiModal from "../bimsurfer/src/MultiModal.js"
         
-        document.addEventListener("DOMContentLoaded", () => {        
+        let processed = false;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (processed) {
+                // For some reason the event fires twice with es-module-shims on chrome
+                return;
+            }            
+            processed = true;
+
             var modelName = window.location.hash;
             if (modelName.length < 1) {
                 modelName = "Duplex_A_20110907_optimized";

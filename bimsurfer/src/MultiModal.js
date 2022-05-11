@@ -3,8 +3,6 @@ import {StaticTreeRenderer, SELECT_EXCLUSIVE} from './StaticTreeRenderer.js';
 import MetaDataRenderer from './MetaDataRenderer.js';
 import * as Request from './Request.js';
 import * as Utils from './Utils.js';
-import AnnotationRenderer from './AnnotationRenderer.js';
-import * as Assets from './Assets.js';
 import EventHandler from './EventHandler.js';
 
 function makePartial(fn, arg) {
@@ -325,7 +323,7 @@ export default class MultiModalViewer extends EventHandler {
             v.setColor({ids: v.viewer.getObjectIds(), color: {a: 0.1}});
           }
         }
-        v.setColor.apply(v, arguments);
+        v.setColor(colorArgs);
       } else {
         v.reset({colors: true});
       }
@@ -335,7 +333,7 @@ export default class MultiModalViewer extends EventHandler {
   setVisibility(vizArgs) {
     this.performOnViewers((v) => {
       if (vizArgs.ids && vizArgs.ids.length) {
-        v.setVisibility.apply(v, arguments);
+        v.setVisibility(vizArgs);
       } else {
         v.reset({colors: true});
       }
@@ -361,7 +359,7 @@ export default class MultiModalViewer extends EventHandler {
     this.liveShareEnabled = !this.liveShareEnabled;
 
     const make_throttle = (delay, F) => {
-      return function(...a) {
+      return (...a) => {
         if (!this.liveShareEnabled) {
           // @todo also disable event
           return;

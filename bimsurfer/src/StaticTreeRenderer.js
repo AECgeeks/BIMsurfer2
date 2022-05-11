@@ -66,7 +66,7 @@ export class StaticTreeRenderer extends EventHandler {
       }
     }
 
-    if (fire) {
+    if (fire !== false) {
       if (decomposingParent) {
         this.fire('selection-context-changed', [{
           secondary: true,
@@ -442,11 +442,12 @@ export class StaticTreeRenderer extends EventHandler {
 
   setVisibility(vizArgs) {
     (vizArgs.ids || []).forEach((id) => {
-      if (eyeNodes[id]) {
+      let eye;
+      if (eye = this.eyeNodes[id]) {
         if (vizArgs.visible) {
-          eyeNodes[id] = eye.classList.remove('bimsurfer-tree-eye-off');
+          this.eyeNodes[id] = eye.classList.remove('bimsurfer-tree-eye-off');
         } else {
-          eyeNodes[id] = eye.classList.add('bimsurfer-tree-eye-off');
+          this.eyeNodes[id] = eye.classList.add('bimsurfer-tree-eye-off');
         }
       }
     });

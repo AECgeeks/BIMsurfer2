@@ -1,5 +1,11 @@
 import EventHandler from './EventHandler.js';
 import * as Utils from './Utils.js';
+import * as THREE from 'three';
+import {DRACOLoader} from '../lib/three/r140/DRACOLoader.js';
+import {GLTFLoader} from '../lib/three/r140/GLTFLoader.js';
+import {OrbitControls} from '../lib/three/r140/OrbitControls.js';
+import {SSAOPass} from '../lib/three/r140/postprocessing/SSAOPass.js';
+import {EffectComposer} from '../lib/three/r140/postprocessing/EffectComposer.js';
 
 const lineMaterial = new THREE.LineBasicMaterial({
   color: 0x000000,
@@ -66,7 +72,14 @@ export default class ThreeViewer extends EventHandler {
     this.scene = new THREE.Scene();
 
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.gammaFactor = 2.2;
+
+    /*
+    const composer = new EffectComposer(this.renderer);
+    const ssaoPass = new SSAOPass(this.scene, this.camera, this.viewerContainer.offsetWidth, this.viewerContainer.offsetHeight);
+    ssaoPass.kernelRadius = 16;
+    composer.addPass(ssaoPass);
+    */
+
     // @tfk sortObjects still needs to be enabled for correctly rendering the transparency overlay
     // this.renderer.sortObjects = false;
 
@@ -104,7 +117,7 @@ export default class ThreeViewer extends EventHandler {
     this.scene.add(light);
     this.scene.add(new THREE.AmbientLight(0x404050));
 
-    this.controls = new THREE.OrbitControls(this.camera, this.viewerContainer);
+    this.controls = new OrbitControls(this.camera, this.viewerContainer);
     this.controls.addEventListener('change', () => {
       this.fire('this.camera-changed', [this.getCamera()]);
       this.rerender();
@@ -149,18 +162,19 @@ export default class ThreeViewer extends EventHandler {
   }
 
   loadglTF(src) {
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
 
     const isIE11 = !!window.MSInputMethodContext && !!document.documentMode;
 
     if (!isIE11) {
-      const draco = new THREE.DRACOLoader;
-      const threePath = Array.from(document.head.querySelectorAll('script')).map(
-          (s) => s.src,
-      ).filter(
-          (s) => s.split('/').reverse()[0].startsWith('three'),
-      )[0];
-      draco.setDecoderPath(threePath.substr(0, threePath.lastIndexOf('/') + 1));
+      const draco = new DRACOLoader;
+      let origin;
+      try {
+        origin = new URL(import.meta.url).origin.toString();
+      } catch (e) {
+        origin = new URL(window.location.origin).toString();
+      }
+      draco.setDecoderPath(`${origin}/bimsurfer/lib/three/r140`);
       loader.setDRACOLoader(draco);
     }
 
@@ -234,7 +248,7 @@ export default class ThreeViewer extends EventHandler {
         let outside = 0.;
 
         // Calculate distance between projected bounding box coordinates and view frustrum boundaries
-        const largestAngle = 0.;
+        // const largestAngle = 0.;
         for (let i = 0; i < 8; i++) {
           const v = new THREE.Vector3(
                             i & 1 ? boundingBox.min.x : boundingBox.max.x,
@@ -273,7 +287,6 @@ export default class ThreeViewer extends EventHandler {
   }
 
   _updateState() {
-    let id;
     this.previousMaterials.forEach((val, id, _) => {
       if (!(this.selected.has(id) || this.secondarySelected.has(id))) {
         // restore
@@ -347,9 +360,10 @@ export default class ThreeViewer extends EventHandler {
     };
 
     if (intersects.length) {
-      let objId;
-
       for (const x of intersects) {
+        if (!x.object.visible) {
+          continue;
+        }
         if (x.object.geometry.type == 'BufferGeometry') {
           if (x.object.name.startsWith('product-')) {
             processSelection(

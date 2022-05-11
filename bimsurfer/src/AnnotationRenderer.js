@@ -61,7 +61,7 @@ export default class AnnotationRenderer {
               f[12] *= lengthUnit;
               f[13] *= lengthUnit;
               f[14] *= lengthUnit;
-              m.set.apply(m, f);
+              m.set(...f);
               m.transpose();
               return m;
             };
