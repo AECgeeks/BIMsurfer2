@@ -1,82 +1,82 @@
 define({
-	defines: {
-		Representation: {
-			type: "IfcProduct",
-			fields: ["Representation", "geometry"]
-		},
-		ContainsElementsDefine: {
-			type: "IfcSpatialStructureElement",
-			field: "ContainsElements",
-			include: {
-				type: "IfcRelContainedInSpatialStructure",
-				field: "RelatedElements",
-				includes: [
-					"IsDecomposedByDefine",
-					"ContainsElementsDefine",
-					"Representation"
-				]
-			}
-		},
-		IsDecomposedByDefine: {
-			type: "IfcObjectDefinition",
-			field: "IsDecomposedBy",
-			include: {
-				type: "IfcRelDecomposes",
-				field: "RelatedObjects",
-				includes: [
-					"IsDecomposedByDefine",
-					"ContainsElementsDefine",
-					"Representation"
-				]
-			}
-		}
-	},
-	queries: [
+  defines: {
+    Representation: {
+      type: 'IfcProduct',
+      fields: ['Representation', 'geometry'],
+    },
+    ContainsElementsDefine: {
+      type: 'IfcSpatialStructureElement',
+      field: 'ContainsElements',
+      include: {
+        type: 'IfcRelContainedInSpatialStructure',
+        field: 'RelatedElements',
+        includes: [
+          'IsDecomposedByDefine',
+          'ContainsElementsDefine',
+          'Representation',
+        ],
+      },
+    },
+    IsDecomposedByDefine: {
+      type: 'IfcObjectDefinition',
+      field: 'IsDecomposedBy',
+      include: {
+        type: 'IfcRelDecomposes',
+        field: 'RelatedObjects',
+        includes: [
+          'IsDecomposedByDefine',
+          'ContainsElementsDefine',
+          'Representation',
+        ],
+      },
+    },
+  },
+  queries: [
 	    {
-			type: "IfcProject",
-			includes: [
-				"IsDecomposedByDefine",
-				"ContainsElementsDefine"
-			]
+      type: 'IfcProject',
+      includes: [
+        'IsDecomposedByDefine',
+        'ContainsElementsDefine',
+      ],
 	    },
 	    {
-	    	type: "IfcRepresentation",
-	    	includeAllSubtypes: true
+	    	type: 'IfcRepresentation',
+	    	includeAllSubtypes: true,
 	    },
 	    {
-	    	type: "IfcProductRepresentation"
+	    	type: 'IfcProductRepresentation',
 	    },
 	    {
-	    	type: "IfcPresentationLayerWithStyle"
+	    	type: 'IfcPresentationLayerWithStyle',
 	    },
 	    {
-	    	type: "IfcProduct",
-	    	includeAllSubtypes: true
+	    	type: 'IfcProduct',
+	    	includeAllSubtypes: true,
 	    },
 	    {
-	    	type: "IfcProductDefinitionShape"
+	    	type: 'IfcProductDefinitionShape',
 	    },
 	    {
-	    	type: "IfcPresentationLayerAssignment"
+	    	type: 'IfcPresentationLayerAssignment',
 	    },
 	    {
-	    	type: "IfcRelAssociatesClassification",
+	    	type: 'IfcRelAssociatesClassification',
 	    	includes: [
 	    		{
-	    			type: "IfcRelAssociatesClassification",
-	    			field: "RelatedObjects"
+	    			type: 'IfcRelAssociatesClassification',
+	    			field: 'RelatedObjects',
 	    		},
 	    		{
-	    			type: "IfcRelAssociatesClassification",
-	    			field: "RelatingClassification"
-	    		}
-	    	]
+	    			type: 'IfcRelAssociatesClassification',
+	    			field: 'RelatingClassification',
+	    		},
+	    	],
 	    },
 	    {
-	    	type: "IfcSIUnit"
+	    	type: 'IfcSIUnit',
 	    },
 	    {
-	    	type: "IfcPresentationLayerAssignment"
-	    }
-	]
+	    	type: 'IfcPresentationLayerAssignment',
+	    },
+  ],
 });

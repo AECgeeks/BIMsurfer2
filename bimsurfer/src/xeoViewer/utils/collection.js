@@ -141,24 +141,22 @@
  @param [cfg.components] {{Array of String|Component}} Array of {{#crossLink "Component"}}{{/crossLink}} IDs or instances.
  @extends Component
  */
-define(["../../../lib/xeogl"], function () {
+define(['../../../lib/xeogl'], function() {
+  'use strict';
 
-    "use strict";
+  xeogl.Collection = xeogl.Component.extend({
 
-    xeogl.Collection = xeogl.Component.extend({
-
-        /**
+    /**
          JavaScript class name for this Component.
 
          @property type
          @type String
          @final
          */
-        type: "xeogl.Collection",
+    type: 'xeogl.Collection',
 
-        _init: function (cfg) {
-
-            /**
+    _init: function(cfg) {
+      /**
              * The {{#crossLink "Components"}}{{/crossLink}} within this Collection, mapped to their IDs.
              *
              * Fires an {{#crossLink "Collection/updated:event"}}{{/crossLink}} event on change.
@@ -166,17 +164,17 @@ define(["../../../lib/xeogl"], function () {
              * @property components
              * @type {{String:Component}}
              */
-            this.components = {};
+      this.components = {};
 
-            /**
+      /**
              * The number of {{#crossLink "Components"}}{{/crossLink}} within this Collection.
              *
              * @property numComponents
              * @type Number
              */
-            this.numComponents = 0;
+      this.numComponents = 0;
 
-            /**
+      /**
              * A map of maps; for each {{#crossLink "Component"}}{{/crossLink}} type in this Collection,
              * a map to IDs to {{#crossLink "Component"}}{{/crossLink}} instances, eg.
              *
@@ -196,17 +194,17 @@ define(["../../../lib/xeogl"], function () {
              * @property types
              * @type {String:{String:xeogl.Component}}
              */
-            this.types = {};
+      this.types = {};
 
-            // Subscriptions to "destroyed" events from components
-            this._destroyedSubs = {};
+      // Subscriptions to "destroyed" events from components
+      this._destroyedSubs = {};
 
-            if (cfg.components) {
-                this.add(cfg.components);
-            }
-        },
+      if (cfg.components) {
+        this.add(cfg.components);
+      }
+    },
 
-        /**
+    /**
          * Adds one or more {{#crossLink "Component"}}Components{{/crossLink}}s to this Collection.
          *
          * The {{#crossLink "Component"}}Component(s){{/crossLink}} may be specified by instance, ID or type.
@@ -220,166 +218,151 @@ define(["../../../lib/xeogl"], function () {
          * @method add
          * @param {Array of Component} components Array of {{#crossLink "Component"}}Components{{/crossLink}} instances.
          */
-        add: function (components) {
+    add: function(components) {
+      components = xeogl._isArray(components) ? components : [components];
 
-            components = xeogl._isArray(components) ? components : [components];
+      for (let i = 0, len = components.length; i < len; i++) {
+        this._add(components[i]);
+      }
+    },
 
-            for (var i = 0, len = components.length; i < len; i++) {
-                this._add(components[i]);
+    _add: function(c) {
+      let componentId;
+      let component;
+      let type;
+      let types;
+
+      if (c.type) {
+        // Component instance
+
+        component = c;
+      } else if (xeogl._isNumeric(c) || xeogl._isString(c)) {
+        if (this.scene.types[c]) {
+          // Component type
+
+          type = c;
+
+          types = this.scene.types[type];
+
+          if (!types) {
+            this.warn('Component type not found: \'' + type + '\'');
+            return;
+          }
+
+          for (componentId in types) {
+            if (types.hasOwnProperty(componentId)) {
+              this._add(types[componentId]);
             }
-        },
+          }
 
-        _add: function (c) {
+          return;
+        } else {
+          // Component ID
 
-            var componentId;
-            var component;
-            var type;
-            var types;
+          component = this.scene.components[c];
 
-            if (c.type) {
+          if (!component) {
+            this.warn('Component not found: ' + xeogl._inQuotes(c));
+            return;
+          }
+        }
+      } else {
+        return;
+      }
 
-                // Component instance
+      if (component.scene !== this.scene) {
+        // Component in wrong Scene
 
-                component = c;
+        this.warn('Attempted to add component from different xeogl.Scene: ' + xeogl._inQuotes(component.id));
+        return;
+      }
 
-            } else if (xeogl._isNumeric(c) || xeogl._isString(c)) {
+      // Add component to this map
 
-                if (this.scene.types[c]) {
+      if (this.components[component.id]) {
+        // Component already in this Collection
+        return;
+      }
 
-                    // Component type
+      this.components[component.id] = component;
 
-                    type = c;
+      // Register component for its type
 
-                    types = this.scene.types[type];
+      types = this.types[component.type];
 
-                    if (!types) {
-                        this.warn("Component type not found: '" + type + "'");
-                        return;
-                    }
+      if (!types) {
+        types = this.types[component.type] = {};
+      }
 
-                    for (componentId in types) {
-                        if (types.hasOwnProperty(componentId)) {
-                            this._add(types[componentId]);
-                        }
-                    }
+      types[component.id] = component;
 
-                    return;
+      this.numComponents++;
 
-                } else {
+      // Remove component when it's destroyed
 
-                    // Component ID
+      const self = this;
 
-                    component = this.scene.components[c];
+      this._destroyedSubs[component.id] = component.on('destroyed',
+          function() {
+            self._remove(component);
+          });
 
-                    if (!component) {
-                        this.warn("Component not found: " + xeogl._inQuotes(c));
-                        return;
-                    }
-                }
-
-            } else {
-
-                return;
-            }
-
-            if (component.scene !== this.scene) {
-
-                // Component in wrong Scene
-
-                this.warn("Attempted to add component from different xeogl.Scene: " + xeogl._inQuotes(component.id));
-                return;
-            }
-
-            // Add component to this map
-
-            if (this.components[component.id]) {
-
-                // Component already in this Collection
-                return;
-            }
-
-            this.components[component.id] = component;
-
-            // Register component for its type
-
-            types = this.types[component.type];
-
-            if (!types) {
-                types = this.types[component.type] = {};
-            }
-
-            types[component.id] = component;
-
-            this.numComponents++;
-
-            // Remove component when it's destroyed
-
-            var self = this;
-
-            this._destroyedSubs[component.id] = component.on("destroyed",
-                function () {
-                    self._remove(component);
-                });
-
-            /**
+      /**
              * Fired whenever an individual {{#crossLink "Component"}}{{/crossLink}} is added to this {{#crossLink "Collection"}}{{/crossLink}}.
              * @event added
              * @param value {Component} The {{#crossLink "Component"}}{{/crossLink}} that was added.
              */
-            this.fire("added", component);
+      this.fire('added', component);
 
-            if (!this._dirty) {
-                this._scheduleUpdate();
-            }
-        },
+      if (!this._dirty) {
+        this._scheduleUpdate();
+      }
+    },
 
-        _scheduleUpdate: function () {
-            if (!this._dirty) {
-                this._dirty = true;
-                xeogl.scheduleTask(this._notifyUpdated, this);
-            }
-        },
+    _scheduleUpdate: function() {
+      if (!this._dirty) {
+        this._dirty = true;
+        xeogl.scheduleTask(this._notifyUpdated, this);
+      }
+    },
 
-        _notifyUpdated: function () {
-
-            /* Fired on the next {{#crossLink "Scene/tick.animate:event"}}{{/crossLink}} whenever
+    _notifyUpdated: function() {
+      /* Fired on the next {{#crossLink "Scene/tick.animate:event"}}{{/crossLink}} whenever
              * {{#crossLink "Component"}}Components{{/crossLink}} were added or removed since the
              * last {{#crossLink "Scene/tick.animate:event"}}{{/crossLink}} event, to provide a batched change event
              * for subscribers who don't want to react to every individual addition or removal on this Collection.
              *
              * @event updated
              */
-            this.fire("updated");
-            this._dirty = false;
-        },
+      this.fire('updated');
+      this._dirty = false;
+    },
 
-        /**
+    /**
          * Removes all {{#crossLink "Component"}}Components{{/crossLink}} from this Collection.
          *
          * Fires an {{#crossLink "Collection/updated:event"}}{{/crossLink}} event.
          *
          * @method clear
          */
-        clear: function () {
+    clear: function() {
+      this.iterate(function(component) {
+        this._remove(component);
+      });
+    },
 
-            this.iterate(function (component) {
-                this._remove(component);
-            });
-        },
-
-        /**
+    /**
          * Destroys all {{#crossLink "Component"}}Components{{/crossLink}} in this Collection.
          *
          * @method destroyAll
          */
-        destroyAll: function () {
+    destroyAll: function() {
+      this.iterate(function(component) {
+        component.destroy();
+      });
+    },
 
-            this.iterate(function (component) {
-                component.destroy();
-            });
-        },
-
-        /**
+    /**
          * Removes one or more {{#crossLink "Component"}}Components{{/crossLink}} from this Collection.
          *
          * The {{#crossLink "Component"}}Component(s){{/crossLink}} may be specified by instance, ID or type.
@@ -391,90 +374,85 @@ define(["../../../lib/xeogl"], function () {
          * @method remove
          * @param {Array of Components} components Array of {{#crossLink "Component"}}Components{{/crossLink}} instances.
          */
-        remove: function (components) {
+    remove: function(components) {
+      components = xeogl._isArray(components) ? components : [components];
 
-            components = xeogl._isArray(components) ? components : [components];
+      for (let i = 0, len = components.length; i < len; i++) {
+        this._remove(components[i]);
+      }
+    },
 
-            for (var i = 0, len = components.length; i < len; i++) {
-                this._remove(components[i]);
-            }
-        },
+    _remove: function(component) {
+      const componentId = component.id;
 
-        _remove: function (component) {
+      if (component.scene !== this.scene) {
+        this.warn('Attempted to remove component that\'s not in same xeogl.Scene: \'' + componentId + '\'');
+        return;
+      }
 
-            var componentId = component.id;
+      delete this.components[componentId];
 
-            if (component.scene !== this.scene) {
-                this.warn("Attempted to remove component that's not in same xeogl.Scene: '" + componentId + "'");
-                return;
-            }
+      // Unsubscribe from component destruction
 
-            delete this.components[componentId];
+      component.off(this._destroyedSubs[componentId]);
 
-            // Unsubscribe from component destruction
+      delete this._destroyedSubs[componentId];
 
-            component.off(this._destroyedSubs[componentId]);
+      // Unregister component for its type
 
-            delete this._destroyedSubs[componentId];
+      const types = this.types[component.type];
 
-            // Unregister component for its type
+      if (types) {
+        delete types[component.id];
+      }
 
-            var types = this.types[component.type];
+      this.numComponents--;
 
-            if (types) {
-                delete types[component.id];
-            }
-
-            this.numComponents--;
-
-            /**
+      /**
              * Fired whenever an individual {{#crossLink "Component"}}{{/crossLink}} is removed from this {{#crossLink "Collection"}}{{/crossLink}}.
              * @event removed
              * @param value {Component} The {{#crossLink "Component"}}{{/crossLink}} that was removed.
              */
-            this.fire("removed", component);
+      this.fire('removed', component);
 
-            if (!this._dirty) {
-                this._scheduleUpdate();
-            }
-        },
+      if (!this._dirty) {
+        this._scheduleUpdate();
+      }
+    },
 
-        /**
+    /**
          * Iterates with a callback over the {{#crossLink "Component"}}Components{{/crossLink}} in this Collection.
          *
          * @method iterate
          * @param {Function} callback Callback called for each {{#crossLink "Component"}}{{/crossLink}}.
          * @param {Object} [scope=this] Optional scope for the callback, defaults to this Collection.
          */
-        iterate: function (callback, scope) {
-            scope = scope || this;
-            var components = this.components;
-            for (var componentId in components) {
-                if (components.hasOwnProperty(componentId)) {
-                    callback.call(scope, components[componentId]);
-                }
-            }
-        },
-
-        _getJSON: function () {
-
-            var componentIds = [];
-
-            for (var componentId in this.components) {
-                if (this.components.hasOwnProperty(componentId)) {
-                    componentIds.push(this.components[componentId].id); // Don't convert numbers into strings
-                }
-            }
-
-            return {
-                components: componentIds
-            };
-        },
-
-        _destroy: function () {
-
-            this.clear();
+    iterate: function(callback, scope) {
+      scope = scope || this;
+      const components = this.components;
+      for (const componentId in components) {
+        if (components.hasOwnProperty(componentId)) {
+          callback.call(scope, components[componentId]);
         }
-    });
+      }
+    },
 
+    _getJSON: function() {
+      const componentIds = [];
+
+      for (const componentId in this.components) {
+        if (this.components.hasOwnProperty(componentId)) {
+          componentIds.push(this.components[componentId].id); // Don't convert numbers into strings
+        }
+      }
+
+      return {
+        components: componentIds,
+      };
+    },
+
+    _destroy: function() {
+      this.clear();
+    },
+  });
 });
