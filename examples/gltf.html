@@ -52,7 +52,21 @@
         });
         
         window.onkeypress = (evt) => {
-            viewer.setVisibility({ids: viewer.getSelection(), visible: false})
+            if (evt.key === 'h') {
+                viewer.setVisibility({ids: viewer.getSelection(), visible: false});
+            } else if (evt.key === 'H') {
+                viewer.setVisibility({reset: true});
+            } else if (evt.key === 'x') {
+                const ids = viewer.getSelection();
+                viewer.reset({selection: true});
+                viewer.setColor({ids: ids, color: {r: 0., g: 1., b: 1.}, highlight: true});
+            } else if (evt.key === 'X') {
+                viewer.reset({colors: true});
+            }
+        }
+
+        window.onresize = (evt) => {
+            viewer.resize();
         }
     </script>
     <style>

@@ -57,6 +57,12 @@ export default class ThreeViewer extends EventHandler {
     this.rerender = () => {};
 
     this.resize = () => {
+      try {
+        // Temporarily remove canvas node, because content potentially makes parent element grow
+        this.viewerContainer.removeChild(this.renderer.domElement);
+      } catch {
+        // pass
+      }
       const width = this.viewerContainer.offsetWidth;
       let height = this.viewerContainer.offsetHeight;
       if (!height) {
@@ -69,6 +75,7 @@ export default class ThreeViewer extends EventHandler {
       }
       this.renderer.setSize(width, height);
       this.camera.updateProjectionMatrix();
+      this.viewerContainer.appendChild(this.renderer.domElement);
       this.rerender();
     };
 
@@ -106,13 +113,6 @@ export default class ThreeViewer extends EventHandler {
         this.mouseHasMoved = false;
       }, 20);
     }, false);
-
-    /*
-        this.renderer.domElement.removeAttribute('width')
-        this.renderer.domElement.removeAttribute('height')
-        this.renderer.domElement.style = '';
-        */
-    document.getElementById(cfg.domNode).appendChild(this.renderer.domElement);
 
     this.renderer.setClearColor(0x000000, 0);
 
@@ -161,11 +161,20 @@ export default class ThreeViewer extends EventHandler {
   reset(params) {
     if (params.colors) {
       for (const [id, mat] of this.originalMaterials) {
-        const obj = this.scene.getObjectById(id);
-        obj.material = mat;
+        if (!this.selected.has(id)) {
+          const obj = this.scene.getObjectById(id);
+          obj.material = mat;
+        }
       }
       this.rerender();
+    } else if (params.visibility) {
+      this.scene.traverse((object) => {
+        object.visible = true;
+      });
+    } else if (params.selection) {
+      this.setSelection({ids: [], clear: true, selected: true});
     }
+    this.rerender();
   }
 
   loadglTF(src) {
@@ -400,11 +409,7 @@ export default class ThreeViewer extends EventHandler {
   }
 
   setColor(params) {
-    params.ids.forEach((id) => {
-      const obj = this.scene.getObjectById(id) || this.scene.getObjectById(this.nameToId.get(id));
-
-      if (!obj) return;
-
+    const processObject = (obj) => {
       const objects = obj.type === 'Group' ?
                 obj.children :
                 [obj];
@@ -415,7 +420,7 @@ export default class ThreeViewer extends EventHandler {
         if (Array.isArray(color) || color instanceof Float32Array) {
           material.color = new THREE.Color(color[0], color[1], color[2]);
         } else {
-          'rgb'.split().forEach((c) => {
+          'rgb'.split('').forEach((c) => {
             if (c in color) {
               material.color[c] = color[c];
             }
@@ -434,7 +439,22 @@ export default class ThreeViewer extends EventHandler {
           material.depthWrite = !material.transparent;
         }
       });
-    });
+    };
+
+    if (params.ids.length < 10) {
+      params.ids.map((id) => {
+        return this.scene.getObjectById(id) || this.scene.getObjectById(this.nameToId.get(id));
+      }).filter((obj) => obj).forEach(processObject);
+    } else {
+      const idsTransformed = new Set(params.ids.concat(params.ids.map((id) => this.nameToId.get(id))));
+
+      this.scene.traverse((obj) => {
+        if (idsTransformed.has(obj.id)) {
+          processObject(obj);
+        }
+      });
+    }
+
     this.rerender();
   };
 

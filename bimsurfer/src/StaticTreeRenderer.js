@@ -143,6 +143,14 @@ export class StaticTreeRenderer extends EventHandler {
     }
   }
 
+  reset(args) {
+    if (args.visibility) {
+      Object.values(this.eyeNodes).forEach((eye) => {
+        eye.classList.remove('bimsurfer-tree-eye-off');
+      });
+    }
+  }
+
   getSelected(b) {
     b = typeof(b) === 'undefined' ? true: !!b;
     const l = [];
@@ -445,9 +453,9 @@ export class StaticTreeRenderer extends EventHandler {
       let eye;
       if (eye = this.eyeNodes[id]) {
         if (vizArgs.visible) {
-          this.eyeNodes[id] = eye.classList.remove('bimsurfer-tree-eye-off');
+          eye.classList.remove('bimsurfer-tree-eye-off');
         } else {
-          this.eyeNodes[id] = eye.classList.add('bimsurfer-tree-eye-off');
+          eye.classList.add('bimsurfer-tree-eye-off');
         }
       }
     });

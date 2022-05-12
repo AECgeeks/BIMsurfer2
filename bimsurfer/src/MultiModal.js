@@ -335,8 +335,14 @@ export default class MultiModalViewer extends EventHandler {
       if (vizArgs.ids && vizArgs.ids.length) {
         v.setVisibility(vizArgs);
       } else {
-        v.reset({colors: true});
+        v.reset({visibility: true});
       }
+    }, true);
+  }
+
+  reset(resetArgs) {
+    this.performOnViewers((v) => {
+      v.reset(resetArgs);
     }, true);
   }
 
