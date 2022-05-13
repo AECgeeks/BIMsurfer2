@@ -74,7 +74,7 @@ export default class SvgViewer extends EventHandler {
 
     this.svg = null;
 
-    this.elem = document.getElementById(cfg.domNode);
+    this.elem = document.getElementById(args.domNode);
   }
 
   load(src) {

@@ -251,23 +251,23 @@ export default class MultiModalViewer extends EventHandler {
     // IfcConvert --bounds we can no longer overlay them
     // due to the different scaling factors.
 
-    bimSurfer2d = this.bimSurfer2d = new BimSurfer({
+    this.bimSurfer2d = new BimSurfer({
       domNode: this.args.svgDomNode,
       engine: 'svg',
     });
 
     if (this.args.multiSelect === 'click') {
-      bimSurfer2d.shouldClearSelection = function() {
+      this.bimSurfer2d.shouldClearSelection = function() {
         return false;
       };
     }
 
     this.incrementRequestsInProgress();
-    const P = bimSurfer2d.load({
+    const P = this.bimSurfer2d.load({
       src: this.modelPath,
     }).then(this.decrementRequestsInProgress.bind(this));
 
-    bimSurfer2d.on('selection-changed', makePartial(this.processSelectionEvent.bind(this), this.bimSurfer2d));
+    this.bimSurfer2d.on('selection-changed', makePartial(this.processSelectionEvent.bind(this), this.bimSurfer2d));
 
     return P;
   }

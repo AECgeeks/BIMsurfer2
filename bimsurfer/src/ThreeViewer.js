@@ -186,11 +186,11 @@ export default class ThreeViewer extends EventHandler {
       const draco = new DRACOLoader;
       let origin;
       try {
-        origin = new URL(import.meta.url).origin.toString();
+        origin = import.meta.url.replace('/src/ThreeViewer.js', '');
       } catch (e) {
-        origin = new URL(window.location.origin).toString();
+        origin = new URL(window.location.origin) + '/bimsurfer';
       }
-      draco.setDecoderPath(`${origin}/bimsurfer/lib/three/r140`);
+      draco.setDecoderPath(`${origin}/lib/three/r140/`);
       loader.setDRACOLoader(draco);
     }
 
