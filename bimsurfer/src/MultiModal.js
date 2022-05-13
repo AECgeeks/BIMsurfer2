@@ -23,7 +23,20 @@ export default class MultiModalViewer extends EventHandler {
 
     let origin;
     try {
-      origin = new URL(import.meta.url).origin;
+      if (import.meta.webpack) {
+        // Most likely using ifc-pipeline. Inspect scripts in head to
+        // find origin.
+        const scriptSrc = Array.from(document.head.getElementsByTagName('script'))
+            .map((x) => x.src)
+            .filter((x) => x.indexOf('static/App.') !== -1);
+        if (scriptSrc.length === 1) {
+          origin = new URL('..', new URL(scriptSrc[0])).toString();
+        } else {
+          throw new Error();
+        }
+      } else {
+        origin = new URL(import.meta.url).origin;
+      }
     } catch (e) {
       origin = window.location.origin;
     }
