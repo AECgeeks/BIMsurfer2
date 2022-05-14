@@ -286,12 +286,12 @@ export default class MultiModalViewer extends EventHandler {
   }
 
   destroy() {
-    for (const v of [this.metaDataView, this.treeView, bimSurfer2d, this.bimSurfer3d]) {
+    for (const v of [this.metaDataView, this.treeView, this.bimSurfer2d, this.bimSurfer3d]) {
       if (v) {
         v.destroy();
       }
     }
-    this.metaDataView = this.treeView = bimSurfer2d = this.bimSurfer3d = null;
+    this.metaDataView = this.treeView = this.bimSurfer2d = this.bimSurfer3d = null;
   }
 
   getSelection() {
