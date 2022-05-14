@@ -229,7 +229,9 @@ export default class SvgViewer extends EventHandler {
   }
 
   destroy() {
-    this.spz.destroy();
+    if (this.spz) {
+      this.spz.destroy();
+    }
     while (this.elem.lastChild) {
       this.elem.removeChild(this.elem.lastChild);
     }
