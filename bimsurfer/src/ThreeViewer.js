@@ -5,6 +5,7 @@ import {DRACOLoader} from '../lib/three/r140/DRACOLoader.js';
 import {GLTFLoader} from '../lib/three/r140/GLTFLoader.js';
 import {OrbitControls} from '../lib/three/r140/OrbitControls.js';
 import {SSAOPass} from '../lib/three/r140/postprocessing/SSAOPass.js';
+import {RenderPass} from '../lib/three/r140/postprocessing/RenderPass.js';
 import {EffectComposer} from '../lib/three/r140/postprocessing/EffectComposer.js';
 
 const lineMaterial = new THREE.LineBasicMaterial({
@@ -84,20 +85,42 @@ export default class ThreeViewer extends EventHandler {
     this.scene = new THREE.Scene();
 
     this.renderer.setPixelRatio(window.devicePixelRatio);
+    if (cfg.withShadowMaps) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+    }
 
     if (cfg.withSSAO) {
+      this.renderer.autoClear = false;
       this.composer = new EffectComposer(this.renderer);
-      const ssaoPass = new SSAOPass(this.scene, this.camera, this.viewerContainer.offsetWidth, this.viewerContainer.offsetHeight);
-      ssaoPass.kernelRadius = 2;
-      ssaoPass.minDistance = 0.005;
-      ssaoPass.maxDistance = .5;
+      this.composer.setSize(this.viewerContainer.offsetWidth * 2, this.viewerContainer.offsetHeight * 2);
+      const ssaoPass = new SSAOPass(this.scene, this.camera, this.viewerContainer.offsetWidth * 2, this.viewerContainer.offsetHeight * 2);
+      ssaoPass.kernelRadius = 1;
+      ssaoPass.minDistance = 0.01;
+      ssaoPass.maxDistance = 1.0;
+      const renderScene = new RenderPass(this.scene, this.camera);
+      this.composer.addPass(renderScene);
       this.composer.addPass(ssaoPass);
     }
 
     // @tfk sortObjects still needs to be enabled for correctly rendering the transparency overlay
     // this.renderer.sortObjects = false;
 
-    this.rerender = () => cfg.withSSAO ? this.composer.render() : this.renderer.render(this.scene, this.camera);
+    this.rerender = () => {
+      if (cfg.withSSAO) {
+        this.renderer.clear();
+        this.camera.layers.set(0);
+        this.composer.render();
+        this.scene.overrideMaterial = new THREE.MeshBasicMaterial();
+        this.scene.overrideMaterial.colorWrite = false;
+        this.renderer.render(this.scene, this.camera);
+        this.scene.overrideMaterial = null;
+        this.camera.layers.set(1);
+        this.renderer.render(this.scene, this.camera);
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
+    };
 
     // We don't want drag events to be registered as clicks
     this.mouseHasMoved = false;
@@ -118,11 +141,50 @@ export default class ThreeViewer extends EventHandler {
 
     var light = new THREE.DirectionalLight(0xFFFFFF);
     light.position.set(20, 10, 30);
+    light.layers.enableAll();
     this.scene.add(light);
-    var light = new THREE.DirectionalLight(0xFFFFFF, 0.8);
-    light.position.set(-10, 1, -30);
+
+    light = new THREE.DirectionalLight(0xFFFFFF, cfg.withShadowMaps ? 0.3 : 0.8);
+    if (cfg.withShadowMaps) {
+      // Do these really need to be different?
+      light.position.set(-4, 10, -10);
+    } else {
+      light.position.set(-10, 1, -30);
+    }
+    light.layers.enableAll();
+    light.castShadow = !!cfg.withShadowMaps;
     this.scene.add(light);
-    this.scene.add(new THREE.AmbientLight(0x404050));
+
+    if (cfg.withShadowMaps) {
+      const shadow_map_size = 24;
+
+      light.shadow.camera.left = -shadow_map_size;
+      light.shadow.camera.bottom = -shadow_map_size;
+      light.shadow.camera.right = +shadow_map_size;
+      light.shadow.camera.top = +shadow_map_size;
+      light.shadow.mapSize.width = 1024;
+      light.shadow.mapSize.height = 1024;
+      light.shadow.camera.near = 1.;
+      light.shadow.camera.far = 30.;
+      light.shadow.blurSamples = 4;
+      light.shadow.radius = 4;
+      light.shadow.bias = -1.e-2;
+
+      // For visually inspecting the shadow map cam frustrum
+      // const cameraHelper = new THREE.CameraHelper(light.shadow.camera);
+      // this.scene.add(cameraHelper);
+
+      // Add a second identical light to lighten shadows
+      light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+      light.position.set(-4, 10, -10);
+      light.layers.enableAll();
+      this.scene.add(light);
+    }
+
+    light = new THREE.AmbientLight(0x404050);
+    light.layers.enableAll();
+    this.scene.add(light);
+
 
     this.controls = new OrbitControls(this.camera, this.viewerContainer);
     this.controls.addEventListener('change', () => {
@@ -134,6 +196,9 @@ export default class ThreeViewer extends EventHandler {
 
     this.createdGeometries = {};
     this.createdGeometryColors = {};
+
+    this.transparentLayer = new THREE.Layers();
+    this.transparentLayer.set(1);
   }
 
   containedInModel(obj) {
@@ -228,8 +293,16 @@ export default class ThreeViewer extends EventHandler {
       gltf.scene.traverse((obj) => {
         if (obj.isMesh && obj.geometry) {
           this.originalMaterials.set(obj.id, obj.material);
-          obj.material.side = THREE.DoubleSide;
+          if (!this.cfg.withShadowMaps) {
+            obj.material.side = THREE.DoubleSide;
+          }
           obj.material.depthWrite = !obj.material.transparent;
+          if (this.cfg.withSSAO && obj.material.transparent) {
+            obj.layers = this.transparentLayer;
+          } else if (this.cfg.withShadowMaps) {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+          }
 
           if (createLines) {
             let edges;
