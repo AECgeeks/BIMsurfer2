@@ -75,6 +75,7 @@ export default class SvgViewer extends EventHandler {
     this.svg = null;
 
     this.elem = document.getElementById(args.domNode);
+    this.args = args;
   }
 
   load(src) {
@@ -288,7 +289,7 @@ export default class SvgViewer extends EventHandler {
     };
     traverse(this.svg);
     this.toggleStorey(0);
-    this.select.onchange = function(evt) {
+    this.select.onchange = (evt) => {
       this.toggleStorey(evt.target.selectedIndex);
     };
     this.storeys.forEach((s, i) => {
@@ -319,7 +320,7 @@ export default class SvgViewer extends EventHandler {
     });
     this.rootGroup = children(this.svg).filter((n) => n.tagName == 'g')[0];
     updateZoom();
-    svgDoc.onclick = function(evt) {
+    svgDoc.onclick = (evt) => {
       let n = evt.target;
       const nodes = [];
       if (n.tagName !== 'svg') {
@@ -330,7 +331,7 @@ export default class SvgViewer extends EventHandler {
       }
       this.setSelection({
         selected: true,
-        clear: cfg.app.shouldClearSelection(evt),
+        clear: this.args.app.shouldClearSelection(evt),
         nodes: nodes,
       });
     };
