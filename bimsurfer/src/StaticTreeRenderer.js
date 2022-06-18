@@ -180,7 +180,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
 
             let styleSheet = null;
             let styleSheet2 = null;
-            let level = 0;
+            let level = args.hideLevels || 0;
+            let minLevel = level;
             let maxLevel = 0;
             let mergeMode = false;
             let itemsByLevelByName = {};
@@ -249,8 +250,8 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 let switchLevel = (advance) => {
                     return () => {
                         level += advance;
-                        if (level < 0) {
-                            level = 0;
+                        if (level < minLevel) {
+                            level = minLevel;
                         }
                         if (level > maxLevel) {
                             level = maxLevel;
@@ -278,117 +279,143 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     d = duplicateNameWrapper;
                 }
 
-                var label = document.createElement("div");
-                var children = document.createElement("div");
-                var eye;
+                // The following structure is built:
+                //
+                // <div>          <-- d
+                //   <div>        <-- label
+                //     <i>        <-- label_icon
+                //     ""         <-- nm
+                //   <div>        <-- children
+                //     <div>      <-- d2 (next recursion d)
+                //     ...
 
-                if (args.withVisibilityToggle) {
-                    eye = document.createElement("i");
-                    eye.className = 'bimsurfer-tree-eye material-icons';
-                    label.appendChild(eye)
-                }
+                const levelHidden = !args.singleLevel && args.hideLevels && level < args.hideLevels;
+                if (!levelHidden) {
 
-                if (!parentId) {
-                    self.roots.push(qid);
-                } else {
-                    (self.parentToChildMapping[parentId] = (self.parentToChildMapping[parentId] || [])).push(qid);
-                    self.childParentMapping[qid] = parentId;
-                }
-                
-                let nm = n.label || n.name || n.guid;
-                
-                if (args.singleLevel) {
-                    let k = `l${level}-${nm}`;
-                    let li = itemsByLevelByName[k] = itemsByLevelByName[k] || [];
-                    if (li.length) {
-                        duplicateNameWrapper.classList.add("duplicate-name");
-                    } else {
-                        firstOrrenceOfDuplicateName[k] = qid;
+                    var label = document.createElement("div");
+                    var children = document.createElement("div");
+                    var eye;
+
+                    if (args.withVisibilityToggle) {
+                        eye = document.createElement("i");
+                        eye.className = 'bimsurfer-tree-eye material-icons';
+                        label.appendChild(eye)
                     }
-                    li.push(d);
-                    
-                    let qid0 = firstOrrenceOfDuplicateName[k];
-                    li = duplicateNameIdsById[qid0] = duplicateNameIdsById[qid0] || [];
-                    li.push(qid);
-                } else {
-                    label.className = "bimsurfer-tree-label";
-                    let label_collapse = document.createElement("i");
-                    label_collapse.className = "collapse material-icons";
-                    label.appendChild(label_collapse);
-                    if ((n.children || []).filter(x => !x["xlink:href"]).length) {
-                        if ((args.expandUntil || []).indexOf(n.type) !== -1) {
-                            d.classList.toggle('bimsurfer-tree-node-collapsed');
-                        }
 
-                        label_collapse.onclick = function(evt) {
+                    if (!parentId) {
+                        self.roots.push(qid);
+                    } else {
+                        (self.parentToChildMapping[parentId] = (self.parentToChildMapping[parentId] || [])).push(qid);
+                        self.childParentMapping[qid] = parentId;
+                    }
+                    
+                    let nm = n.label || n.name || n.guid;
+                    
+                    if (args.singleLevel) {
+                        let k = `l${level}-${nm}`;
+                        let li = itemsByLevelByName[k] = itemsByLevelByName[k] || [];
+                        if (li.length) {
+                            duplicateNameWrapper.classList.add("duplicate-name");
+                        } else {
+                            firstOrrenceOfDuplicateName[k] = qid;
+                        }
+                        li.push(d);
+                        
+                        let qid0 = firstOrrenceOfDuplicateName[k];
+                        li = duplicateNameIdsById[qid0] = duplicateNameIdsById[qid0] || [];
+                        li.push(qid);
+                    } else {
+                        label.className = "bimsurfer-tree-label";
+                        let label_collapse = document.createElement("i");
+                        label_collapse.className = "collapse material-icons";
+                        label.appendChild(label_collapse);
+                        if ((n.children || []).filter(x => !x["xlink:href"]).length) {
+                            if ((args.expandUntil || []).indexOf(n.type) !== -1) {
+                                d.classList.toggle('bimsurfer-tree-node-collapsed');
+                            }
+
+                            label_collapse.onclick = function(evt) {
+                                evt.stopPropagation();
+                                evt.preventDefault();
+                                d.classList.toggle('bimsurfer-tree-node-collapsed');
+                            };
+                        } else {
+                            label_collapse.style.visibility = 'hidden';
+                        }
+                    }
+
+                    let label_icon = document.createElement("i");
+                    label_icon.className = "icon material-icons";
+                    label_icon.innerHTML = self.icons[n.type];
+                    label.appendChild(label_icon);
+
+                    label.appendChild(document.createTextNode(nm));
+
+                    self.objectTypeMapping[qid] = n.type;
+                    
+                    d.appendChild(label);
+                    if (!args.singleLevel) {
+                        children.className = "bimsurfer-tree-children-with-indent";
+                        d.appendChild(children);
+                    }
+
+                    domNodes[qid] = {label: label, eye: eye};
+
+                    if (eye) {
+                        eye.onclick = function(evt) {
                             evt.stopPropagation();
                             evt.preventDefault();
-                            d.classList.toggle('bimsurfer-tree-node-collapsed');
-                        };
-                    } else {
-                        label_collapse.style.visibility = 'hidden';
+
+                            var visible = !eye.classList.toggle('bimsurfer-tree-eye-off');
+                            var descendants = collect(qid);
+                            var fn = visible ? DOMTokenList.prototype.remove : DOMTokenList.prototype.add;
+                            descendants.forEach(s => {
+                                fn.call(domNodes[s].eye.classList, 'bimsurfer-tree-eye-off');
+                            });
+
+                            self.fire("visibility-changed", [{visible: visible, ids: descendants}]);
+
+                            return false;
+                        }
                     }
-                }
-
-                let label_icon = document.createElement("i");
-                label_icon.className = "icon material-icons";
-                label_icon.innerHTML = self.icons[n.type];
-                label.appendChild(label_icon);
-
-                label.appendChild(document.createTextNode(nm));
-
-                self.objectTypeMapping[qid] = n.type;
-                
-                d.appendChild(label);
-                if (!args.singleLevel) {
-                    children.className = "bimsurfer-tree-children-with-indent";
-                    d.appendChild(children);
-                }
-
-                domNodes[qid] = {label: label, eye: eye};
-
-                if (eye) {
-                    eye.onclick = function(evt) {
+                    
+                    label.onclick = function(evt) {                    
                         evt.stopPropagation();
                         evt.preventDefault();
 
-                        var visible = !eye.classList.toggle('bimsurfer-tree-eye-off');
-                        var descendants = collect(qid);
-                        var fn = visible ? DOMTokenList.prototype.remove : DOMTokenList.prototype.add;
-                        descendants.forEach(s => {
-                            fn.call(domNodes[s].eye.classList, 'bimsurfer-tree-eye-off');
-                        });
+                        var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
 
-                        self.fire("visibility-changed", [{visible: visible, ids: descendants}]);
+                        let ids = mergeMode ? collect(...duplicateNameIdsById[qid]) : collect(qid);
+                        self.setSelected(ids, clear ? SELECT_EXCLUSIVE : TOGGLE, true);
+                        self.fire("click", [qid, self.getSelected(true)]);
 
                         return false;
-                    }
+                    };
+
                 }
-                
-                label.onclick = function(evt) {                    
-                    evt.stopPropagation();
-                    evt.preventDefault();
-
-                    var clear = args.app ? args.app.shouldClearSelection(evt) : !evt.shiftKey;
-
-                    let ids = mergeMode ? collect(...duplicateNameIdsById[qid]) : collect(qid);
-                    self.setSelected(ids, clear ? SELECT_EXCLUSIVE : TOGGLE, true);
-                    self.fire("click", [qid, self.getSelected(true)]);
-
-                    return false;
-                };
                 
                 for (var i = 0; i < (n.children || []).length; ++i) {
                     var child = n.children[i];
                     if (fromXml) {
+                        // This is a link to a resource such as a propertyset, do not display
+                        // in the tree view.
                         if (child["xlink:href"]) continue;
-                        // if (child.type === "IfcOpeningElement") continue;
+
+                        // Opening Elements are shown because the fill elements are positioned
+                        // underneath in the IfcConvert output.
+                        // @todo option to hide, similar to the d -> d2 propagation for hideLevels?
+                        if (false && child.type === "IfcOpeningElement") continue;
                     }
                     
-                    var d2 = document.createElement("div");
-                    d2.className = "item";
-                    d2.classList.add(`level-${level+1}`);
-                    (args.singleLevel ? parent_d : children).appendChild(d2);                    
+                    let d2;
+                    if (levelHidden) {
+                        d2 = d;
+                    } else {
+                        d2 = document.createElement("div");
+                        d2.className = "item";
+                        d2.classList.add(`level-${level+1}`);
+                        (args.singleLevel ? parent_d : children).appendChild(d2);
+                    }
 
                     build(modelId, qid, parent_d, d2, child, level+1);
                 }

@@ -16,6 +16,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
     function MultiModalViewer(args) {
      
         let liveShareEnabled = false;
+        let liveShareWithSelection = true;
         
         var n_files = args.n_files || 1;
 
@@ -124,11 +125,8 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                     self.onSelectionChanged(objectIds);
                 }
                 
-                if (liveShareEnabled) {
-                    fetch(`/live/${LIVE_SHARE_ID}`, {
-                        method: 'POST',
-                        body: JSON.stringify({"type": "selection", "data": objectIds})
-                    });
+                if (liveShareEnabled && liveShareWithSelection) {
+                    this.syncSelection({objects: objectIds});
                 }
             }
         }
@@ -152,6 +150,9 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             self.requestsInProgress--;
             if (self.spinner) {
                 self.spinner.style.display = self.requestsInProgress ? 'block' : 'none';
+            }
+            if (!self.requestsInProgress) {
+                self.fire('loading-finished', []);
             }
         }
 
@@ -184,6 +185,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 withVisibilityToggle: args.withTreeVisibilityToggle,
                 singleLevel: args.withThreeSingleLevel,
                 expandUntil: args.treeExpandUntil,
+                hideLevels: args.treeHideLevels,
                 app: this
             });
 
@@ -362,11 +364,19 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
             }
         };
         
+        this.syncSelection = function(args) {
+            let objectIds = args ? args.objects : this.getSelection();
+            fetch(`/live/${LIVE_SHARE_ID}`, {
+                method: 'POST',
+                body: JSON.stringify({"type": "selection", "data": objectIds})
+            });
+        }
         
-        this.toggleLiveShare = function() {
+        this.toggleLiveShare = function(args) {
             let timer;
             let lastUpdate = 0;
             
+            liveShareWithSelection = !args.disableSelection;
             liveShareEnabled = !liveShareEnabled;
             
             var make_throttle = (delay, F) => {
