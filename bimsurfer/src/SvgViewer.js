@@ -327,7 +327,9 @@ export default class SvgViewer extends EventHandler {
         while (n.tagName !== 'g' && n.parentNode) {
           n = n.parentNode;
         }
-        nodes.push(n);
+        if (n.className.baseVal !== 'projection') {
+          nodes.push(n);
+        }
       }
       this.setSelection({
         selected: true,
