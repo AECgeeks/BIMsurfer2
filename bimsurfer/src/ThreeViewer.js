@@ -139,15 +139,20 @@ export default class ThreeViewer extends EventHandler {
 
     this.renderer.setClearColor(0x000000, 0);
 
-    var light = new THREE.DirectionalLight(0xFFFFFF);
-    light.position.set(20, 10, 30);
-    light.layers.enableAll();
+    var light;
+
+    if (!cfg.withShadowMaps) {
+      light = new THREE.DirectionalLight(0xFFFFFF);
+      light.position.set(20, 10, 30);
+      light.layers.enableAll();
+    }
+
     this.scene.add(light);
 
-    light = new THREE.DirectionalLight(0xFFFFFF, cfg.withShadowMaps ? 0.3 : 0.8);
+    light = this.light = new THREE.DirectionalLight(0xFFFFDD, cfg.withShadowMaps ? 0.5 : 0.8);
     if (cfg.withShadowMaps) {
       // Do these really need to be different?
-      light.position.set(-4, 10, -10);
+      light.position.set(4, 10, 10);
     } else {
       light.position.set(-10, 1, -30);
     }
@@ -155,36 +160,23 @@ export default class ThreeViewer extends EventHandler {
     light.castShadow = !!cfg.withShadowMaps;
     this.scene.add(light);
 
-    if (cfg.withShadowMaps) {
-      const shadow_map_size = 24;
-
-      light.shadow.camera.left = -shadow_map_size;
-      light.shadow.camera.bottom = -shadow_map_size;
-      light.shadow.camera.right = +shadow_map_size;
-      light.shadow.camera.top = +shadow_map_size;
+    if (cfg.withShadowMaps) {      
       light.shadow.mapSize.width = 1024;
-      light.shadow.mapSize.height = 1024;
-      light.shadow.camera.near = 1.;
-      light.shadow.camera.far = 30.;
-      light.shadow.blurSamples = 4;
-      light.shadow.radius = 4;
-      light.shadow.bias = -1.e-2;
-
-      // For visually inspecting the shadow map cam frustrum
-      // const cameraHelper = new THREE.CameraHelper(light.shadow.camera);
-      // this.scene.add(cameraHelper);
+      light.shadow.mapSize.height = 1024;      
+      light.shadow.blurSamples = 0;
+      light.shadow.radius = 0;
+      light.shadow.bias = -1.e-3;      
 
       // Add a second identical light to lighten shadows
-      light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
-      light.position.set(-4, 10, -10);
+      light = new THREE.DirectionalLight(0xFFFFDD, 0.3);
+      light.position.copy(this.light.position);
       light.layers.enableAll();
       this.scene.add(light);
     }
 
-    light = new THREE.AmbientLight(0x404050);
+    light = new THREE.AmbientLight(0x404050, 2.0);
     light.layers.enableAll();
     this.scene.add(light);
-
 
     this.controls = new OrbitControls(this.camera, this.viewerContainer);
     this.controls.addEventListener('change', () => {
@@ -199,6 +191,53 @@ export default class ThreeViewer extends EventHandler {
 
     this.transparentLayer = new THREE.Layers();
     this.transparentLayer.set(1);
+  }
+
+  resizeShadowMap() {
+    let tmp = new THREE.Vector3();
+    function* get_corners(bbox) {
+      let p = [bbox.min, bbox.max];
+      for (let i = 0; i < 8; ++i) {
+        tmp.set(
+            p[(i&1)?1:0].x,
+            p[(i&2)?1:0].y,
+            p[(i&4)?1:0].z
+        );
+        yield tmp;
+      }
+    }
+
+    let bbox = new THREE.Box3().setFromObject(this.scene);
+
+    let minVec = new THREE.Vector3();
+    let maxVec = new THREE.Vector3();
+
+    for (let v of get_corners(bbox)) {
+      v.applyMatrix4(this.light.shadow.camera.matrixWorldInverse);
+      minVec.min(v);
+      maxVec.max(v);
+    }
+    
+    const shadow_map_size = 1;
+
+    
+
+    this.light.shadow.camera.left = minVec.x;
+    this.light.shadow.camera.bottom = minVec.y;
+    this.light.shadow.camera.right = maxVec.x;
+    this.light.shadow.camera.top = maxVec.y;
+    this.light.shadow.camera.near = -maxVec.z;
+    this.light.shadow.camera.far = -minVec.z;
+
+    this.light.shadow.camera.matrixWorldNeedsUpdate = true;
+
+    this.light.shadow.camera.updateProjectionMatrix();   
+
+    // For visually inspecting the shadow map cam frustrum
+    // const cameraHelper = new THREE.CameraHelper(this.light.shadow.camera);
+    // this.scene.add(cameraHelper);
+
+    this.rerender();
   }
 
   containedInModel(obj) {
@@ -299,7 +338,7 @@ export default class ThreeViewer extends EventHandler {
           obj.material.depthWrite = !obj.material.transparent;
           if (this.cfg.withSSAO && obj.material.transparent) {
             obj.layers = this.transparentLayer;
-          } else if (this.cfg.withShadowMaps) {
+          } else if (this.cfg.withShadowMaps && !obj.material.transparent) {
             obj.castShadow = true;
             obj.receiveShadow = true;
           }
@@ -371,6 +410,10 @@ export default class ThreeViewer extends EventHandler {
         this.controls.update();
 
         this.firstLoad = false;
+      }
+
+      if (this.cfg.withShadowMaps) {
+        this.resizeShadowMap();
       }
 
       this.fire('loaded');
