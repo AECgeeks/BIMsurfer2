@@ -297,7 +297,7 @@ export default class ThreeViewer extends EventHandler {
               .map((x) => x.src)
               .filter((x) => x.indexOf('static/App.') !== -1);
           if (scriptSrc.length === 1) {
-            origin = new URL('./bimsurfer', new URL(scriptSrc[0])).toString();
+            origin = new URL('./bimsurfer/src/v2/bimsurfer', new URL(scriptSrc[0])).toString();
           } else {
             throw new Error();
           }
