@@ -184,6 +184,7 @@ function (cfg, BimSurfer, StaticTreeRenderer, MetaDataRenderer, Request, Utils, 
                 domNode: domNode,
                 withVisibilityToggle: args.withTreeVisibilityToggle,
                 singleLevel: args.withThreeSingleLevel,
+                mobileMode: args.withThreeMobileMode,
                 expandUntil: args.treeExpandUntil,
                 hideLevels: args.treeHideLevels,
                 app: this

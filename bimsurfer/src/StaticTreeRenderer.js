@@ -38,6 +38,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
         this.childParentMapping = {};
         this.objectTypeMapping = {};
         this.roots = [];
+        this.currentFocusNode = null;
 
         function collect(...qids) {
             var descendants = [];
@@ -189,7 +190,16 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
             let duplicateNameIdsById = {};
 
 
-            if (args.singleLevel) {
+            if (args.singleLevel || args.mobileMode) {
+                let setHiddenByDefault = () => {
+                    if (!styleSheet) {
+                        styleSheet = document.createElement('style');
+                        document.head.appendChild(styleSheet);
+                    }
+                    styleSheet.textContent = `
+                    .item { display: none; }
+                    `;
+                }
 
                 let toggleSheet = () => {
                     if (!styleSheet) {
@@ -217,35 +227,25 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
 
-                toggleSheet();
-                mergeMode = true;
-                toggleMergeMode();
+                if (args.singleLevel) {
+                    toggleSheet();
+                    mergeMode = true;
+                    toggleMergeMode();
+                } else if (args.mobileMode) {
+                    setHiddenByDefault();
+                }
 
                 var controls = document.createElement("div");
                 controls.className = "controls";
-                var levelup = document.createElement("div");
-                var leveldown = document.createElement("div");
-                var merged = document.createElement("div");
                 domNode.appendChild(controls);
+                
+                var levelup = document.createElement("div");
                 controls.appendChild(levelup);
-                controls.appendChild(leveldown);
-                controls.appendChild(merged);
-
+                
                 let levelupsymbol = document.createElement("i");
                 levelupsymbol.className = 'material-icons';
                 levelupsymbol.innerHTML = "arrow_back_ios_new";
-
-                let leveldownsymbol = document.createElement("i");
-                leveldownsymbol.className = 'material-icons';
-                leveldownsymbol.innerHTML = "arrow_forward_ios";
-
-                let mergesymbol = document.createElement("i");
-                mergesymbol.className = 'material-icons';
-                mergesymbol.innerHTML = "merge_type";
-
                 levelup.appendChild(levelupsymbol);
-                leveldown.appendChild(leveldownsymbol);
-                merged.appendChild(mergesymbol);
 
                 let switchLevel = (advance) => {
                     return () => {
@@ -260,12 +260,40 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     }
                 }
 
-                levelup.onclick = switchLevel(-1);
-                leveldown.onclick = switchLevel(+1);
-                merged.onclick = toggleMergeMode;
+                if (args.singleLevel) {
+                    var leveldown = document.createElement("div");
+                    controls.appendChild(leveldown);
+                    var merged = document.createElement("div");
+                    controls.appendChild(merged);
+
+                    let leveldownsymbol = document.createElement("i");
+                    leveldownsymbol.className = 'material-icons';
+                    leveldownsymbol.innerHTML = "arrow_forward_ios";
+
+                    let mergesymbol = document.createElement("i");
+                    mergesymbol.className = 'material-icons';
+                    mergesymbol.innerHTML = "merge_type";
+                    
+                    leveldown.appendChild(leveldownsymbol);
+                    merged.appendChild(mergesymbol);
+
+                    levelup.onclick = switchLevel(-1);
+                    leveldown.onclick = switchLevel(+1);
+                    merged.onclick = toggleMergeMode;
+                } else {
+                    levelup.onclick = () => {
+                        this.parentToChildMapping[this.childParentMapping[this.currentFocusNode]].map(id => domNodes[id].label.parentNode).forEach(e => {e.style = 'display: block';});
+                        this.parentToChildMapping[this.currentFocusNode].map(id => domNodes[id].label.parentNode).forEach(e => {e.style = 'display: none';});
+                        this.currentFocusNode = this.childParentMapping[this.currentFocusNode];
+                        if (!domNodes[this.currentFocusNode]) {
+                            levelup.classList.add('disabled');
+                        }
+                    }
+                    levelup.classList.add('disabled');
+                }
             }            
 
-            var build = function(modelId, parentId, parent_d, d, n, level) {
+            let build = (modelId, parentId, parent_d, d, n, level) => {
                 if (level > maxLevel) {
                     maxLevel = level;
                 }
@@ -324,6 +352,26 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                         let qid0 = firstOrrenceOfDuplicateName[k];
                         li = duplicateNameIdsById[qid0] = duplicateNameIdsById[qid0] || [];
                         li.push(qid);
+                    } else if (args.mobileMode) {
+                        label.className = "bimsurfer-tree-label";
+                        let label_collapse = document.createElement("i");
+                        label_collapse.className = "material-icons";
+                        label_collapse.innerHTML = "arrow_forward_ios";
+                        label_collapse.style='padding: 0 0.3em; margin: 0 0.6em';
+                        label.appendChild(label_collapse);
+                        if ((n.children || []).filter(x => !x["xlink:href"]).length) {
+                            label_collapse.onclick = (evt) => {
+                                evt.stopPropagation();
+                                evt.preventDefault();
+                                
+                                Array.from(label.parentNode.parentNode.children).forEach(e => {e.style = 'display: none'});
+                                this.parentToChildMapping[qid].map(id => domNodes[id].label.parentNode).forEach(e => {e.style = 'display: block';});
+                                this.currentFocusNode = qid;
+                                levelup.classList.remove('disabled');
+                            };
+                        } else {
+                            label_collapse.style.visibility = 'hidden';
+                        }
                     } else {
                         label.className = "bimsurfer-tree-label";
                         let label_collapse = document.createElement("i");
@@ -334,7 +382,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                                 d.classList.toggle('bimsurfer-tree-node-collapsed');
                             }
 
-                            label_collapse.onclick = function(evt) {
+                            label_collapse.onclick = (evt) => {
                                 evt.stopPropagation();
                                 evt.preventDefault();
                                 d.classList.toggle('bimsurfer-tree-node-collapsed');
@@ -354,7 +402,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                     self.objectTypeMapping[qid] = n.type;
                     
                     d.appendChild(label);
-                    if (!args.singleLevel) {
+                    if (!args.singleLevel && !args.mobileMode) {
                         children.className = "bimsurfer-tree-children-with-indent";
                         d.appendChild(children);
                     }
@@ -414,7 +462,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                         d2 = document.createElement("div");
                         d2.className = "item";
                         d2.classList.add(`level-${level+1}`);
-                        (args.singleLevel ? parent_d : children).appendChild(d2);
+                        ((args.singleLevel || args.mobileMode) ? parent_d : children).appendChild(d2);
                     }
 
                     build(modelId, qid, parent_d, d2, child, level+1);
@@ -432,6 +480,7 @@ define(["./EventHandler", "./Request", "./Utils"], function(EventHandler, Reques
                 column1.className = 'bimsurfer-tree-column';
                 row1cell.className = "item";
                 row1cell.classList.add(`level-0`);
+                row1cell.style = 'display: block';
                 column1.appendChild(row1cell);
                 column1.style.width = '100%';
 
