@@ -52,6 +52,11 @@ function testOverlap(text, path) {
   let u = 0.;
   const step = (bb_width < bb_height ? bb_width : bb_height) / 2.;
 
+  if (step < 1.e-5) {
+    // Some extra safeguard to counter infinite loops.
+    return false;
+  }
+
   while (u < len) {
     // Sample some points over the bath when contained in the AABB rectangle
     // for the text we know text and path intersect and text should be hidden
