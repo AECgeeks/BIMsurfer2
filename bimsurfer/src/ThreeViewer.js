@@ -145,9 +145,8 @@ export default class ThreeViewer extends EventHandler {
       light = new THREE.DirectionalLight(0xFFFFFF);
       light.position.set(20, 10, 30);
       light.layers.enableAll();
+      this.scene.add(light);
     }
-
-    this.scene.add(light);
 
     light = this.light = new THREE.DirectionalLight(0xFFFFDD, cfg.withShadowMaps ? 0.5 : 0.8);
     if (cfg.withShadowMaps) {
